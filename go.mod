@@ -3,8 +3,11 @@ module github.com/NickHackman/tagger
 go 1.17
 
 require (
+	github.com/cli/browser v1.1.0
+	github.com/cli/oauth v0.9.0
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.9.0
+	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 )
 
 require (
