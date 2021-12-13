@@ -1,5 +1,5 @@
 /*
-Copyright © 2021 Nick Hackman
+Copyright © 2021 Nick Hackman <snickhackman@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -31,8 +31,6 @@ import (
 )
 
 var cfgFile string
-var org string
-var template string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -43,21 +41,19 @@ in a GitHub organization and create Tags/Releases for only the repositories
 that have changes. The description/message associated with the Tag/Release is
 a Go Sprig Template that will be used by default for all messages.
 
+GitHub Oauth: 
+
 Examples:
 
-tagger --org "GitHub org"
+tagger login
 
-tagger --org "GitHub org" --config "tagger.yml"
+tagger --url "git.enterprise.com" login
 
-tagger --org "GitHub org" --template "This is an example"
+tagger publish --org "GitHub org"
 
-Template Variables:
+tagger --config "tagger.yml" publish --org "GitHub org"
 
-TODO: exhaustive list of template variables
-
-In addition to the above variables that are injected automatically, Tagger uses Sprig and makes all functions available
-
-Sprig Documentation: https://masterminds.github.io/sprig/.`,
+tagger publish --org "GitHub org" --template "This is an example"`,
 	Run: func(cmd *cobra.Command, args []string) {},
 }
 
@@ -71,8 +67,11 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $XDG_CONFIG_HOME/tagger.yaml)")
-	rootCmd.PersistentFlags().StringVar(&org, "org", "", "GitHub organization to create tags")
-	rootCmd.PersistentFlags().StringVar(&template, "template", "", "Go template that is the default message for all tags/releases")
+	rootCmd.PersistentFlags().String("url", "https://api.github.com/", "GitHub url (default is https://api.github.com/)")
+	rootCmd.PersistentFlags().String("token", "", "GitHub Oauth Token (will be generated if not provided)")
+
+	viper.BindPFlag("token", rootCmd.PersistentFlags().Lookup("token"))
+	viper.BindPFlag("url", rootCmd.PersistentFlags().Lookup("url"))
 }
 
 // initConfig reads in config file and ENV variables if set.
