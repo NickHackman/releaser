@@ -3,6 +3,7 @@ module github.com/NickHackman/tagger
 go 1.17
 
 require (
+	github.com/charmbracelet/lipgloss v0.3.0
 	github.com/cli/browser v1.1.0
 	github.com/cli/oauth v0.9.0
 	github.com/google/go-github/v41 v41.0.0
@@ -13,14 +14,31 @@ require (
 )
 
 require (
+	github.com/atotto/clipboard v0.1.2 // indirect
+	github.com/charmbracelet/harmonica v0.1.0 // indirect
+	github.com/sahilm/fuzzy v0.1.0 // indirect
+)
+
+require (
+	github.com/charmbracelet/bubbles v0.9.0
+	github.com/charmbracelet/bubbletea v0.19.1
+	github.com/containerd/console v1.0.3 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/mitchellh/mapstructure v1.4.2 // indirect
+	github.com/muesli/ansi v0.0.0-20211031195517-c9f0611b6c70 // indirect
+	github.com/muesli/reflow v0.3.0 // indirect
+	github.com/muesli/termenv v0.9.0 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/spf13/afero v1.6.0 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
@@ -29,6 +47,7 @@ require (
 	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e // indirect
 	golang.org/x/net v0.0.0-20211206223403-eba003a116a9 // indirect
 	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
+	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.6 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect

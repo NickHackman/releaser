@@ -22,8 +22,10 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"fmt"
+	"time"
 
+	"github.com/NickHackman/tagger/service"
+	"github.com/NickHackman/tagger/ui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -41,8 +43,17 @@ TODO: exhaustive list of template variables
 In addition to the above variables that are injected automatically, Tagger uses Sprig and makes all functions available
 
 Sprig Documentation: https://masterminds.github.io/sprig/.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("publish called")
+	RunE: func(cmd *cobra.Command, args []string) error {
+		token := viper.GetString("token")
+		url := viper.GetString("url")
+		timeout := viper.GetDuration("timeout")
+
+		gh, err := service.NewGitHub().Url(url).Token(token).Build()
+		if err != nil {
+			return err
+		}
+
+		return ui.Execute(gh, timeout)
 	},
 }
 
@@ -50,8 +61,10 @@ func init() {
 	rootCmd.AddCommand(publishCmd)
 
 	rootCmd.Flags().StringP("org", "o", "", "GitHub organization to create tags")
-	rootCmd.Flags().StringP("template", "t", "", "Go template that is the default message for all tags/releases")
+	rootCmd.Flags().String("template", "", "Go template that is the default message for all tags/releases")
+	rootCmd.Flags().DurationP("timeout", "t", time.Minute, "Timeout duration to wait for GitHub to respond before exiting (default 1m)")
 
 	viper.BindPFlag("template", rootCmd.Flags().Lookup("template"))
 	viper.BindPFlag("org", rootCmd.Flags().Lookup("org"))
+	viper.BindPFlag("timeout", rootCmd.Flags().Lookup("timeout"))
 }
