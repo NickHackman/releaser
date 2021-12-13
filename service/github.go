@@ -164,18 +164,20 @@ func (gh *GitHub) ReleasableReposByOrg(ctx context.Context, org string) (<-chan 
 	}
 }
 
-type OrgsResponse struct {
-	// LastPage determines when all user Organizations are finished being loaded.
-	LastPage int
-	// Orgs GitHub organizations.
-	Orgs []*github.Organization
+type OrgResponse struct {
+	// Total determines when all user Organizations are finished being loaded.
+	Total int
+	// Org GitHub organization.
+	Org *github.Organization
 }
 
 // Orgs async retrival of GitHub organizations. Returns a channel to listen to for OrgsResponse
 // and the function to run as a goroutine to acquire them.
-func (gh *GitHub) Orgs(ctx context.Context) (<-chan *OrgsResponse, func() error) {
-	c := make(chan *OrgsResponse)
+func (gh *GitHub) Orgs(ctx context.Context) (<-chan *OrgResponse, func() error) {
+	c := make(chan *OrgResponse)
 	next := 1
+
+	errGrp, ctx := errgroup.WithContext(ctx)
 
 	return c, func() error {
 		defer close(c)
@@ -192,12 +194,33 @@ func (gh *GitHub) Orgs(ctx context.Context) (<-chan *OrgsResponse, func() error)
 				return fmt.Errorf("failed to get organization for authenticate user: %v", err)
 			}
 
-			c <- &OrgsResponse{LastPage: r.LastPage + 1, Orgs: orgs}
+			for _, org := range orgs {
+				org := org
+
+				errGrp.Go(func() error {
+					orgInfo, r, err := gh.client.Organizations.Get(ctx, org.GetLogin())
+					if err != nil {
+						return fmt.Errorf("failed to get additional information for organization %s: %v", org.GetLogin(), err)
+					}
+
+					if err := github.CheckResponse(r.Response); err != nil {
+						return fmt.Errorf("failed to get additional information for organization %s: %v", org.GetLogin(), err)
+					}
+
+					c <- &OrgResponse{Total: len(orgs), Org: orgInfo}
+
+					return nil
+				})
+			}
 
 			next = r.NextPage
 			if next == 0 {
 				break
 			}
+		}
+
+		if err := errGrp.Wait(); err != nil {
+			return err
 		}
 
 		return nil
