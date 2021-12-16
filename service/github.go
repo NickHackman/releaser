@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/go-github/v41/github"
@@ -18,8 +19,8 @@ type GitHub struct {
 }
 
 type ReleaseableRepoResponse struct {
-	// LastPage determines when all user Organizations are finished being loaded.
-	LastPage int
+	// Total determines when all user Organizations are finished being loaded.
+	Total int32
 	// Repos in a GitHub organization that have been updated more recently than their newest tag/release.
 	Commits   []*github.RepositoryCommit
 	Repo      *github.Repository
@@ -110,6 +111,7 @@ func (gh *GitHub) releaseableRepo(ctx context.Context, org string, repo *github.
 func (gh *GitHub) ReleasableReposByOrg(ctx context.Context, org string) (<-chan *ReleaseableRepoResponse, func() error) {
 	c := make(chan *ReleaseableRepoResponse)
 	next := 1
+	var total int32
 
 	errGrp, ctx := errgroup.WithContext(ctx)
 
@@ -132,6 +134,8 @@ func (gh *GitHub) ReleasableReposByOrg(ctx context.Context, org string) (<-chan 
 				continue
 			}
 
+			atomic.AddInt32(&total, int32(len(possibleRepos)))
+
 			for _, repo := range possibleRepos {
 				repo := repo
 
@@ -141,11 +145,13 @@ func (gh *GitHub) ReleasableReposByOrg(ctx context.Context, org string) (<-chan 
 						return err
 					}
 
-					if releaseableRepo != nil {
-						releaseableRepo.LastPage = len(possibleRepos)
-						c <- releaseableRepo
+					if releaseableRepo == nil {
+						atomic.AddInt32(&total, -1)
+						return nil
 					}
 
+					releaseableRepo.Total = total
+					c <- releaseableRepo
 					return nil
 				})
 			}
