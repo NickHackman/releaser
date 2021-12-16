@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync/atomic"
-	"time"
 
 	"github.com/google/go-github/v41/github"
 	"golang.org/x/sync/errgroup"
@@ -46,12 +45,12 @@ func (gh *GitHub) latestTag(ctx context.Context, owner, repo string) (*github.Re
 	return tags[0], nil
 }
 
-func (gh *GitHub) commitsSince(ctx context.Context, owner, repo string, since time.Time) ([]*github.RepositoryCommit, error) {
+func (gh *GitHub) commitsSince(ctx context.Context, owner, repo string, sha string) ([]*github.RepositoryCommit, error) {
 	next := 1
 
 	var commitsSince []*github.RepositoryCommit
 	for {
-		options := &github.CommitsListOptions{Since: since, ListOptions: github.ListOptions{PerPage: githubMaxPerPage, Page: next}}
+		options := &github.CommitsListOptions{ListOptions: github.ListOptions{PerPage: githubMaxPerPage, Page: next}}
 
 		commits, r, err := gh.client.Repositories.ListCommits(ctx, owner, repo, options)
 		if err != nil {
@@ -62,7 +61,13 @@ func (gh *GitHub) commitsSince(ctx context.Context, owner, repo string, since ti
 			return nil, err
 		}
 
-		commitsSince = append(commitsSince, commits...)
+		for _, commit := range commits {
+			if commit.GetSHA() == sha {
+				return commitsSince, nil
+			}
+
+			commitsSince = append(commitsSince, commit)
+		}
 
 		next = r.NextPage
 		if next == 0 {
@@ -87,9 +92,9 @@ func (gh *GitHub) releaseableRepo(ctx context.Context, org string, repo *github.
 		return nil, fmt.Errorf("failed to get latest tag for %s/%s: %v", org, repo.GetName(), err)
 	}
 
-	var commitsSince time.Time
+	var commitsSince string
 	if tag != nil {
-		commitsSince = tag.GetCommit().Author.GetDate()
+		commitsSince = tag.GetCommit().GetSHA()
 	}
 
 	commits, err := gh.commitsSince(ctx, org, repo.GetName(), commitsSince)
