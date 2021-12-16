@@ -67,7 +67,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $XDG_CONFIG_HOME/tagger.yaml)")
-	rootCmd.PersistentFlags().String("url", "https://api.github.com/", "GitHub url (default is https://api.github.com/)")
+	rootCmd.PersistentFlags().String("url", "https://api.github.com/", "GitHub API url (default is https://api.github.com/)")
 	rootCmd.PersistentFlags().String("token", "", "GitHub Oauth Token (will be generated if not provided)")
 
 	viper.BindPFlag("token", rootCmd.PersistentFlags().Lookup("token"))
