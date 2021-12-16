@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/NickHackman/tagger/service"
-	"github.com/NickHackman/tagger/ui/pages"
+	"github.com/NickHackman/tagger/ui/pages/organizations"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -21,6 +21,6 @@ func Execute(gh *service.GitHub, timeout time.Duration) error {
 		}
 	}()
 
-	orgPage := pages.NewOrganizations(ctx, gh)
+	orgPage := organizations.New(ctx, gh)
 	return tea.NewProgram(orgPage, tea.WithAltScreen()).Start()
 }
