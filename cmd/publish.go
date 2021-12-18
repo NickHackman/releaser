@@ -66,11 +66,11 @@ Sprig Documentation: https://masterminds.github.io/sprig/.`,
 func init() {
 	rootCmd.AddCommand(publishCmd)
 
-	rootCmd.Flags().StringP("org", "o", "", "GitHub organization to create tags")
-	rootCmd.Flags().String("template", "", "Go template that is the default message for all tags/releases")
-	rootCmd.Flags().DurationP("timeout", "t", time.Minute, "Timeout duration to wait for GitHub to respond before exiting (default 1m)")
+	publishCmd.Flags().StringP("org", "o", "", "GitHub organization to create tags")
+	publishCmd.Flags().String("template", "", "Go template that is the default message for all tags/releases")
+	publishCmd.Flags().DurationP("timeout", "t", time.Minute, "Timeout duration to wait for GitHub to respond before exiting (default 1m)")
 
-	cobra.CheckErr(viper.BindPFlag("template", rootCmd.Flags().Lookup("template")))
-	cobra.CheckErr(viper.BindPFlag("org", rootCmd.Flags().Lookup("org")))
-	cobra.CheckErr(viper.BindPFlag("timeout", rootCmd.Flags().Lookup("timeout")))
+	cobra.CheckErr(viper.BindPFlag("template", publishCmd.Flags().Lookup("template")))
+	cobra.CheckErr(viper.BindPFlag("org", publishCmd.Flags().Lookup("org")))
+	cobra.CheckErr(viper.BindPFlag("timeout", publishCmd.Flags().Lookup("timeout")))
 }
