@@ -8,6 +8,7 @@ import (
 	"github.com/NickHackman/tagger/internal/service"
 	"github.com/NickHackman/tagger/internal/tui/config"
 	"github.com/NickHackman/tagger/internal/tui/pages/organizations"
+	"github.com/NickHackman/tagger/internal/tui/pages/repositories"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -21,6 +22,10 @@ func Execute(gh *service.GitHub, config *config.Config) error {
 		}
 	}()
 
-	orgPage := organizations.New(ctx, gh, config)
-	return tea.NewProgram(orgPage, tea.WithAltScreen(), tea.WithMouseAllMotion()).Start()
+	var page tea.Model = organizations.New(ctx, gh, config)
+	if config.Org != "" {
+		page = repositories.New(ctx, gh, config, 0, 0)
+	}
+
+	return tea.NewProgram(page, tea.WithAltScreen(), tea.WithMouseAllMotion()).Start()
 }
