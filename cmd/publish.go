@@ -26,6 +26,7 @@ import (
 
 	"github.com/NickHackman/tagger/internal/service"
 	"github.com/NickHackman/tagger/internal/tui"
+	"github.com/NickHackman/tagger/internal/tui/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -46,14 +47,19 @@ Sprig Documentation: https://masterminds.github.io/sprig/.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		token := viper.GetString("token")
 		url := viper.GetString("url")
-		timeout := viper.GetDuration("timeout")
 
 		gh, err := service.NewGitHub().Url(url).Token(token).Build()
 		if err != nil {
 			return err
 		}
 
-		return tui.Execute(gh, timeout)
+		config := &config.Config{
+			Org:            viper.GetString("org"),
+			Timeout:        viper.GetDuration("timeout"),
+			TemplateString: viper.GetString("template"),
+		}
+
+		return tui.Execute(gh, config)
 	},
 }
 

@@ -6,6 +6,7 @@ import (
 	"github.com/NickHackman/tagger/internal/service"
 	"github.com/NickHackman/tagger/internal/tui/bubbles/organization"
 	"github.com/NickHackman/tagger/internal/tui/colors"
+	"github.com/NickHackman/tagger/internal/tui/config"
 	"github.com/NickHackman/tagger/internal/tui/pages/repositories"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -27,9 +28,11 @@ type Model struct {
 	ctx     context.Context
 	channel <-chan *service.OrgResponse
 	orgs    int
+
+	config *config.Config
 }
 
-func New(ctx context.Context, gh *service.GitHub) *Model {
+func New(ctx context.Context, gh *service.GitHub, config *config.Config) *Model {
 	listKeys := newOrganizationsListKeyMap()
 
 	list := list.NewModel([]list.Item{}, organization.Delegate{}, 0, 0)
@@ -48,10 +51,15 @@ func New(ctx context.Context, gh *service.GitHub) *Model {
 
 	progress := progress.NewModel(progress.WithoutPercentage(), progress.WithGradient(colors.ProgressStart, colors.ProgressEnd))
 
-	org := &Model{gh: gh, list: list, progress: progress, keys: listKeys, ctx: ctx}
-	org.channel = fetch(ctx, gh)
-
-	return org
+	return &Model{
+		gh:       gh,
+		list:     list,
+		progress: progress,
+		keys:     listKeys,
+		ctx:      ctx,
+		channel:  fetch(ctx, gh),
+		config:   config,
+	}
 }
 
 func fetch(ctx context.Context, gh *service.GitHub) <-chan *service.OrgResponse {
@@ -105,7 +113,9 @@ func (o Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return o, nil
 			}
 
-			repositories := repositories.New(o.ctx, o.gh, organization.R.Org.GetLogin(), o.list.Width(), o.list.Height())
+			o.config.Org = organization.R.Org.GetLogin()
+
+			repositories := repositories.New(o.ctx, o.gh, o.config, o.list.Width(), o.list.Height())
 			return repositories, repositories.Init()
 		case key.Matches(msg, o.keys.refresh):
 			o.orgs = 0

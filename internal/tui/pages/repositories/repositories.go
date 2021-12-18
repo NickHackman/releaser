@@ -10,6 +10,7 @@ import (
 	"github.com/NickHackman/tagger/internal/template"
 	"github.com/NickHackman/tagger/internal/tui/bubbles/repository"
 	"github.com/NickHackman/tagger/internal/tui/colors"
+	"github.com/NickHackman/tagger/internal/tui/config"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -17,7 +18,6 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -37,6 +37,7 @@ type Model struct {
 	gh      *service.GitHub
 	channel <-chan *service.ReleaseableRepoResponse
 	repos   int
+	config  *config.Config
 }
 
 func max(a, b int) int {
@@ -47,12 +48,12 @@ func max(a, b int) int {
 	return a
 }
 
-func New(ctx context.Context, gh *service.GitHub, org string, width, height int) *Model {
+func New(ctx context.Context, gh *service.GitHub, config *config.Config, width, height int) *Model {
 	listWidth := max(width, minTerminalWidth)
 	listKeys := newKeyMap()
 
 	list := list.NewModel([]list.Item{}, repository.Delegate{}, listWidth, height-2)
-	list.Title = fmt.Sprintf("%s Repositories", strings.Title(org))
+	list.Title = fmt.Sprintf("%s Repositories", strings.Title(config.Org))
 	list.SetShowHelp(false)
 	list.Styles.Title = listTitleStyle
 
@@ -73,12 +74,13 @@ func New(ctx context.Context, gh *service.GitHub, org string, width, height int)
 		keys:         listKeys,
 		ctx:          ctx,
 		gh:           gh,
-		channel:      fetch(ctx, gh, org),
+		channel:      fetch(ctx, gh, config.Org),
+		config:       config,
 	}
 }
 
 func (r Model) Init() tea.Cmd {
-	return awaitCmd(r.channel)
+	return awaitCmd(r.channel, r.config.TemplateString)
 }
 
 func (r Model) ShortHelp() []key.Binding {
@@ -128,7 +130,7 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		index := len(r.list.Items()) - 1
 		percent := float64(r.repos) / float64(msg.R.Total)
-		cmds = append(cmds, awaitCmd(r.channel), r.progress.SetPercent(percent), r.list.InsertItem(index, msg))
+		cmds = append(cmds, awaitCmd(r.channel, r.config.TemplateString), r.progress.SetPercent(percent), r.list.InsertItem(index, msg))
 
 		// Loaded first repository, update the preview
 		if r.repos == 1 {
@@ -161,13 +163,12 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			newItem := repository.Item{R: current.R, Preview: result}
 			cmds = append(cmds, r.list.SetItem(currentIndex, newItem))
 		case key.Matches(msg, r.keys.Template):
-			templatedString := viper.GetString("template")
-			newTemplate, err := edit.Content(templatedString, edit.TemplateInstructions)
+			newTemplate, err := edit.Content(r.config.TemplateString, edit.TemplateInstructions)
 			if err != nil {
 				cmds = append(cmds, r.list.NewStatusMessage("Error: "+err.Error()))
 				break
 			}
-			viper.Set("template", newTemplate)
+			r.config.TemplateString = newTemplate
 
 			for i, item := range r.list.Items() {
 				current, ok := item.(repository.Item)
@@ -241,14 +242,13 @@ func constructPreview(r *service.ReleaseableRepoResponse, templatedString string
 	return content
 }
 
-func awaitCmd(channel <-chan *service.ReleaseableRepoResponse) tea.Cmd {
+func awaitCmd(channel <-chan *service.ReleaseableRepoResponse, templateString string) tea.Cmd {
 	return func() tea.Msg {
 		r, ok := <-channel
 		if !ok {
 			return nil
 		}
 
-		templatedString := viper.GetString("template")
-		return repository.Item{R: r, Preview: constructPreview(r, templatedString)}
+		return repository.Item{R: r, Preview: constructPreview(r, templateString)}
 	}
 }
