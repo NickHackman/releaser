@@ -64,7 +64,7 @@ func init() {
 	rootCmd.Flags().String("template", "", "Go template that is the default message for all tags/releases")
 	rootCmd.Flags().DurationP("timeout", "t", time.Minute, "Timeout duration to wait for GitHub to respond before exiting (default 1m)")
 
-	viper.BindPFlag("template", rootCmd.Flags().Lookup("template"))
-	viper.BindPFlag("org", rootCmd.Flags().Lookup("org"))
-	viper.BindPFlag("timeout", rootCmd.Flags().Lookup("timeout"))
+	cobra.CheckErr(viper.BindPFlag("template", rootCmd.Flags().Lookup("template")))
+	cobra.CheckErr(viper.BindPFlag("org", rootCmd.Flags().Lookup("org")))
+	cobra.CheckErr(viper.BindPFlag("timeout", rootCmd.Flags().Lookup("timeout")))
 }

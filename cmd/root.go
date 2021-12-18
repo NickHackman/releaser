@@ -70,8 +70,8 @@ func init() {
 	rootCmd.PersistentFlags().String("url", "https://api.github.com/", "GitHub API url (default is https://api.github.com/)")
 	rootCmd.PersistentFlags().String("token", "", "GitHub Oauth Token (will be generated if not provided)")
 
-	viper.BindPFlag("token", rootCmd.PersistentFlags().Lookup("token"))
-	viper.BindPFlag("url", rootCmd.PersistentFlags().Lookup("url"))
+	cobra.CheckErr(viper.BindPFlag("token", rootCmd.PersistentFlags().Lookup("token")))
+	cobra.CheckErr(viper.BindPFlag("url", rootCmd.PersistentFlags().Lookup("url")))
 }
 
 // initConfig reads in config file and ENV variables if set.
