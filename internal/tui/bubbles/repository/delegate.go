@@ -35,6 +35,10 @@ func (d Delegate) Render(w io.Writer, m list.Model, index int, listItem list.Ite
 	var output strings.Builder
 	output.WriteString(titleStyle.Render(item.GetName()))
 
+	if genericItem.Selected {
+		output.WriteString(checkmarkStyle.Render(" ✓"))
+	}
+
 	if item.GetDescription() != "" {
 		text := strings.Split(wordwrap.String(item.GetDescription(), 75), "\n")[0]
 		output.WriteString("\n" + descriptionStyle.Render(text))

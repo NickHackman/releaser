@@ -5,8 +5,9 @@ import (
 )
 
 type Item struct {
-	R       *service.ReleaseableRepoResponse
-	Preview string
+	R        *service.ReleaseableRepoResponse
+	Preview  string
+	Selected bool
 }
 
 func (oi Item) FilterValue() string {

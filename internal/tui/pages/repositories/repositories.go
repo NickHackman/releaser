@@ -196,15 +196,24 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return r, tea.Quit
 		case key.Matches(msg, r.keys.Edit):
 			r.handleEditPreview()
+			r.updatePreview()
 		case key.Matches(msg, r.keys.Template):
 			r.handleEditTemplate()
+			r.updatePreview()
 		case key.Matches(msg, r.keys.SaveTemplate):
 			return r, tea.Quit
 		case key.Matches(msg, r.keys.Version):
 			return r, tea.Quit
-		}
+		case key.Matches(msg, r.keys.Selection):
+			item := r.list.SelectedItem()
 
-		r.updatePreview()
+			current, ok := item.(repository.Item)
+			if !ok {
+				return r, nil
+			}
+
+			cmds = append(cmds, r.list.SetItem(r.list.Index(), repository.Item{R: current.R, Preview: current.Preview, Selected: !current.Selected}))
+		}
 	}
 
 	currentIndex := r.list.Index()
