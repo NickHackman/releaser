@@ -46,7 +46,7 @@ Examples:
 
 tagger login
 
-tagger --url git.enterprise.com login`,
+tagger login --auth.url git.enterprise.com`,
 	Run: func(cmd *cobra.Command, args []string) {
 		token, err := githubOauthFlow()
 		cobra.CheckErr(err)
@@ -71,7 +71,7 @@ func githubOauthFlow() (string, error) {
 		AllowSignup: true,
 	}
 
-	url := viper.GetString("url")
+	url := viper.GetString("auth.url")
 	authUrl := fmt.Sprintf("%s/login/oauth/authorize", url)
 	browserUrl, err := flow.BrowserURL(authUrl, params)
 	if err != nil {
@@ -86,8 +86,10 @@ func githubOauthFlow() (string, error) {
 		return "", fmt.Errorf("failed to open browser: %v", err)
 	}
 
+	accessTokenUrl := fmt.Sprintf("%s/login/oauth/access_token", url)
+
 	httpClient := http.DefaultClient
-	accessToken, err := flow.AccessToken(httpClient, "https://github.com/login/oauth/access_token", githubClientSecret)
+	accessToken, err := flow.AccessToken(httpClient, accessTokenUrl, githubClientSecret)
 	if err != nil {
 		return "", fmt.Errorf("failed to get GitHub Oauth token: %v", err)
 	}
@@ -96,5 +98,8 @@ func githubOauthFlow() (string, error) {
 }
 
 func init() {
+	loginCmd.Flags().String("auth.url", "https://github.com/", "GitHub url (default is https://github.com/)")
+	viper.BindPFlag("auth.url", loginCmd.Flags().Lookup("auth.url"))
+
 	rootCmd.AddCommand(loginCmd)
 }
