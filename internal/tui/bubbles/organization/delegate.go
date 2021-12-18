@@ -1,4 +1,4 @@
-package org
+package organization
 
 import (
 	"fmt"
@@ -29,18 +29,20 @@ func (d Delegate) Render(w io.Writer, m list.Model, index int, listItem list.Ite
 		return
 	}
 
+	org := oi.R.Org
+
 	var output strings.Builder
-	output.WriteString(titleStyle.Render(oi.GetLogin()))
-	if oi.GetIsVerified() {
+	output.WriteString(titleStyle.Render(org.GetLogin()))
+	if org.GetIsVerified() {
 		output.WriteString(" ✅")
 	}
 
-	if oi.GetDescription() != "" {
-		output.WriteString("\n" + descriptionStyle.Render(oi.GetDescription()))
+	if org.GetDescription() != "" {
+		output.WriteString("\n" + descriptionStyle.Render(org.GetDescription()))
 	}
 
-	if oi.GetHTMLURL() != "" {
-		output.WriteString("\n" + urlStyle.Render(oi.GetHTMLURL()))
+	if org.GetHTMLURL() != "" {
+		output.WriteString("\n" + urlStyle.Render(org.GetHTMLURL()))
 	}
 
 	render := unselectedStyle.Render
