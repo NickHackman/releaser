@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/NickHackman/tagger/service"
-	"github.com/NickHackman/tagger/ui/bubbles/org"
-	"github.com/NickHackman/tagger/ui/colors"
-	"github.com/NickHackman/tagger/ui/pages/repositories"
+	"github.com/NickHackman/tagger/tui/bubbles/org"
+	"github.com/NickHackman/tagger/tui/colors"
+	"github.com/NickHackman/tagger/tui/pages/repositories"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/progress"

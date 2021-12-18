@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/NickHackman/tagger/service"
-	"github.com/NickHackman/tagger/ui"
+	"github.com/NickHackman/tagger/tui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -53,7 +53,7 @@ Sprig Documentation: https://masterminds.github.io/sprig/.`,
 			return err
 		}
 
-		return ui.Execute(gh, timeout)
+		return tui.Execute(gh, timeout)
 	},
 }
 

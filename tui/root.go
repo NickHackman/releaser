@@ -1,4 +1,4 @@
-package ui
+package tui
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/NickHackman/tagger/service"
-	"github.com/NickHackman/tagger/ui/pages/organizations"
+	"github.com/NickHackman/tagger/tui/pages/organizations"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
