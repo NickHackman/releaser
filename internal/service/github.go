@@ -26,6 +26,26 @@ type ReleaseableRepoResponse struct {
 	LatestTag *github.RepositoryTag
 }
 
+// Creates a GitHub release provided the owner/repo version and body where the name of the release and the tag will be version.
+func (gh *GitHub) CreateRelease(ctx context.Context, owner, repo, version, body string) (*github.RepositoryRelease, error) {
+	release := &github.RepositoryRelease{
+		TagName: github.String(version),
+		Body:    github.String(body),
+		Name:    github.String(version),
+	}
+
+	releaseResponse, r, err := gh.client.Repositories.CreateRelease(ctx, owner, repo, release)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := github.CheckResponse(r.Response); err != nil {
+		return nil, err
+	}
+
+	return releaseResponse, nil
+}
+
 func (gh *GitHub) latestTag(ctx context.Context, owner, repo string) (*github.RepositoryTag, error) {
 	options := &github.ListOptions{Page: 1, PerPage: 1}
 
