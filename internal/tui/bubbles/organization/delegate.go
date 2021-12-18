@@ -34,7 +34,7 @@ func (d Delegate) Render(w io.Writer, m list.Model, index int, listItem list.Ite
 	var output strings.Builder
 	output.WriteString(titleStyle.Render(org.GetLogin()))
 	if org.GetIsVerified() {
-		output.WriteString(" ✅")
+		output.WriteString(checkmarkStyle.Render(" ✓"))
 	}
 
 	if org.GetDescription() != "" {

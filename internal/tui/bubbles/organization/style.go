@@ -11,4 +11,5 @@ var (
 	urlStyle         = lipgloss.NewStyle().Underline(true).Foreground(colors.Url)
 	selectedStyle    = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), false, false, false, true).BorderForeground(colors.Selected)
 	unselectedStyle  = lipgloss.NewStyle().PaddingLeft(1)
+	checkmarkStyle   = lipgloss.NewStyle().Foreground(colors.Title).Bold(true)
 )
