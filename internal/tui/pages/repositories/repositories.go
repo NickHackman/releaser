@@ -23,6 +23,7 @@ import (
 const (
 	minTerminalWidth         = 150
 	increaseTerminalWidthMsg = "Increase width of terminal to display content."
+	loadingMsg               = "Loading..."
 )
 
 type Model struct {
@@ -59,7 +60,7 @@ func New(ctx context.Context, gh *service.GitHub, config *config.Config, width, 
 
 	help := help.NewModel()
 	viewport := viewport.Model{Width: width - listWidth, Height: height - 5}
-	viewport.SetContent("Loading...")
+	viewport.SetContent(loadingMsg)
 
 	progress := progress.NewModel(progress.WithoutPercentage(), progress.WithGradient(colors.ProgressStart, colors.ProgressEnd))
 	progress.Width = width
@@ -108,6 +109,53 @@ func (r *Model) updatePreview() {
 	r.templateView.SetContent(current.Preview)
 }
 
+// handleEditTemplate opens the user's $EDITOR (or if none vim) and after they save/quit
+// reads the template and applies the new template to every repository in the list.
+func (r *Model) handleEditTemplate() []tea.Cmd {
+	var cmds []tea.Cmd
+
+	newTemplate, err := edit.Content(r.config.TemplateString, edit.TemplateInstructions)
+	if err != nil {
+		return append(cmds, r.list.NewStatusMessage(fmt.Sprintf("Error: %v", err)))
+	}
+
+	r.config.TemplateString = newTemplate
+
+	for i, item := range r.list.Items() {
+		current, ok := item.(repository.Item)
+		if !ok {
+			return cmds
+		}
+
+		newItem := repository.Item{R: current.R, Preview: constructPreview(current.R, newTemplate)}
+		// SetItems doubles the amount of items in the List
+		cmds = append(cmds, r.list.SetItem(i, newItem))
+	}
+
+	return cmds
+}
+
+// handleEditPreview opens the user's $EDITOR (or if none vim) and after they save/quit
+// reads the new preview and applies it.
+func (r *Model) handleEditPreview() []tea.Cmd {
+	var cmds []tea.Cmd
+
+	currentItem := r.list.SelectedItem()
+	current, ok := currentItem.(repository.Item)
+	if !ok {
+		return cmds
+	}
+
+	result, err := edit.Content(current.Preview, edit.BasicInstructions)
+	if err != nil {
+		return append(cmds, r.list.NewStatusMessage(fmt.Sprintf("Error: %v", err)))
+	}
+
+	currentIndex := r.list.Index()
+	newItem := repository.Item{R: current.R, Preview: result}
+	return append(cmds, r.list.SetItem(currentIndex, newItem))
+}
+
 func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	var cmd tea.Cmd
@@ -147,39 +195,9 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, r.keys.Quit):
 			return r, tea.Quit
 		case key.Matches(msg, r.keys.Edit):
-			currentItem := r.list.SelectedItem()
-			current, ok := currentItem.(repository.Item)
-			if !ok {
-				return r, nil
-			}
-
-			result, err := edit.Content(current.Preview, edit.BasicInstructions)
-			if err != nil {
-				cmds = append(cmds, r.list.NewStatusMessage("Error: "+err.Error()))
-				break
-			}
-
-			currentIndex := r.list.Index()
-			newItem := repository.Item{R: current.R, Preview: result}
-			cmds = append(cmds, r.list.SetItem(currentIndex, newItem))
+			r.handleEditPreview()
 		case key.Matches(msg, r.keys.Template):
-			newTemplate, err := edit.Content(r.config.TemplateString, edit.TemplateInstructions)
-			if err != nil {
-				cmds = append(cmds, r.list.NewStatusMessage("Error: "+err.Error()))
-				break
-			}
-			r.config.TemplateString = newTemplate
-
-			for i, item := range r.list.Items() {
-				current, ok := item.(repository.Item)
-				if !ok {
-					return r, nil
-				}
-
-				newItem := repository.Item{R: current.R, Preview: constructPreview(current.R, newTemplate)}
-				// SetItems doubles the amount of items in the List
-				cmds = append(cmds, r.list.SetItem(i, newItem))
-			}
+			r.handleEditTemplate()
 		case key.Matches(msg, r.keys.SaveTemplate):
 			return r, tea.Quit
 		case key.Matches(msg, r.keys.Version):
@@ -194,6 +212,7 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 	newIndex := r.list.Index()
 
+	// Only set preview if the current index has changed
 	if currentIndex != newIndex {
 		r.updatePreview()
 	}
@@ -236,7 +255,7 @@ func constructPreview(r *service.ReleaseableRepoResponse, templatedString string
 	tagTemplate := template.NewTag(r.Repo, r.Commits)
 	content, err := tagTemplate.Execute(templatedString)
 	if err != nil {
-		content = templatedString + "\n\n# Error: " + err.Error()
+		content = fmt.Sprintf("%s\n\n# Error: %v", templatedString, err)
 	}
 
 	return content
