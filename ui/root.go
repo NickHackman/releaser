@@ -22,5 +22,5 @@ func Execute(gh *service.GitHub, timeout time.Duration) error {
 	}()
 
 	orgPage := organizations.New(ctx, gh)
-	return tea.NewProgram(orgPage, tea.WithAltScreen()).Start()
+	return tea.NewProgram(orgPage, tea.WithAltScreen(), tea.WithMouseAllMotion()).Start()
 }
