@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/NickHackman/tagger/service"
-	"github.com/NickHackman/tagger/tui/pages/organizations"
+	"github.com/NickHackman/tagger/internal/service"
+	"github.com/NickHackman/tagger/internal/tui/pages/organizations"
 	tea "github.com/charmbracelet/bubbletea"
 )
 

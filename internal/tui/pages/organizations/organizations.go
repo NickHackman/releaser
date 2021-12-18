@@ -3,10 +3,10 @@ package organizations
 import (
 	"context"
 
-	"github.com/NickHackman/tagger/service"
-	"github.com/NickHackman/tagger/tui/bubbles/org"
-	"github.com/NickHackman/tagger/tui/colors"
-	"github.com/NickHackman/tagger/tui/pages/repositories"
+	"github.com/NickHackman/tagger/internal/service"
+	"github.com/NickHackman/tagger/internal/tui/bubbles/org"
+	"github.com/NickHackman/tagger/internal/tui/colors"
+	"github.com/NickHackman/tagger/internal/tui/pages/repositories"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/progress"

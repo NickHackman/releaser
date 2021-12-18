@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"github.com/NickHackman/tagger/service"
+	"github.com/NickHackman/tagger/internal/service"
 )
 
 type Item struct {

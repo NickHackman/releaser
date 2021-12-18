@@ -1,7 +1,7 @@
 package org
 
 import (
-	"github.com/NickHackman/tagger/tui/colors"
+	"github.com/NickHackman/tagger/internal/tui/colors"
 	"github.com/charmbracelet/lipgloss"
 )
 

@@ -24,8 +24,8 @@ package cmd
 import (
 	"time"
 
-	"github.com/NickHackman/tagger/service"
-	"github.com/NickHackman/tagger/tui"
+	"github.com/NickHackman/tagger/internal/service"
+	"github.com/NickHackman/tagger/internal/tui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

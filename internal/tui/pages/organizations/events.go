@@ -1,5 +1,5 @@
 package organizations
 
-import "github.com/NickHackman/tagger/service"
+import "github.com/NickHackman/tagger/internal/service"
 
 type orgInsertCmd *service.OrgResponse
