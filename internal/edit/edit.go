@@ -1,6 +1,8 @@
 package edit
 
 import (
+	"bufio"
+	_ "embed"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -10,41 +12,14 @@ import (
 
 const (
 	defaultEditor = "vim"
+)
 
-	BasicInstructions = `# Quit the file without saving to not modify the results
-# Comments are lines starting with a '#' and will be ignored.`
+var (
+	//go:embed template-instructions.txt
+	TemplateInstructions string
 
-	TemplateInstructions = `# This will overwrite all your manual changes!
-#
-# Top Level Variables:
-# {{ .RepositoryName }}                  hello-world	
-# {{ .RepositoryOwner }}                 octocat
-# {{ .RepositoryUrl }}                   https://github.com/octocat/hello-world	
-# {{ .RepositoryDescription }}           Example description
-# {{ .RepositoryDefaultBranch }}         main
-# {{ .Commits }}                         Array of commits
-#
-# Commit:
-# {{ .Sha }}                             Unique identifier for commit
-# {{ .Url }}                             URL to commit
-# {{ .Message }}                         Full commit message (includes newlines)
-#
-# Author/Committer:
-# {{ .AuthorUsername }}                  octocat (GitHub Username)
-# {{ .AuthorName }}                      octocat (Commit Name)
-# {{ .AuthorEmail }}                     octocat@github.com
-# {{ .AuthorDate }} 
-# {{ .AuthorUrl }}                       https://github.com/octocat
-#
-# Templates also include Sprig functions: https://masterminds.github.io/sprig/strings.html
-#
-# Example:
-#
-# {{ range .Commits }}
-# {{ substr 0 8 .Sha }} committed by {{ .CommitterUsername }} and authored by {{ .AuthorUsername }} {{ .Message }}
-# {{ end }}
-#
-` + BasicInstructions
+	//go:embed manual-edit-instructions.txt
+	ManualEditInstructions string
 )
 
 func runEditor(fileName string) error {
@@ -111,16 +86,18 @@ func Content(content, instructions string) (string, error) {
 }
 
 func ignoreComments(content string) string {
-	lines := strings.Split(content, "\n")
 	var builder strings.Builder
+	scanner := bufio.NewScanner(strings.NewReader(content))
 
-	for _, line := range lines {
+	for scanner.Scan() {
+		line := scanner.Text()
+
 		if strings.HasPrefix(line, "#") {
 			continue
 		}
 
 		builder.WriteString(line)
-		builder.WriteRune('\n')
+		builder.WriteString("\n")
 	}
 
 	return strings.TrimSpace(builder.String())
