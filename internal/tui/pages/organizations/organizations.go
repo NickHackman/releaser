@@ -85,6 +85,7 @@ func (o Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
+		o.config.Width, o.config.Height = msg.Width, msg.Height
 		o.progress.Width = msg.Width
 
 		_, h := lipgloss.Size(o.progress.View())
@@ -115,7 +116,7 @@ func (o Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			o.config.Org = organization.R.Org.GetLogin()
 
-			repositories := repositories.New(o.ctx, o.gh, o.config, o.list.Width(), o.list.Height())
+			repositories := repositories.New(o.ctx, o.gh, o.config)
 			return repositories, repositories.Init()
 		case key.Matches(msg, o.keys.refresh):
 			o.orgs = 0

@@ -24,7 +24,7 @@ func Execute(gh *service.GitHub, config *config.Config) error {
 
 	var page tea.Model = organizations.New(ctx, gh, config)
 	if config.Org != "" {
-		page = repositories.New(ctx, gh, config, 0, 0)
+		page = repositories.New(ctx, gh, config)
 	}
 
 	return tea.NewProgram(page, tea.WithAltScreen(), tea.WithMouseAllMotion()).Start()

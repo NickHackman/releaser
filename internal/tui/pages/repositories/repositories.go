@@ -24,15 +24,15 @@ const (
 	minTerminalWidth         = 150
 	increaseTerminalWidthMsg = "Increase width of terminal to display content."
 	loadingMsg               = "Loading..."
+	previewTitle             = "Preview"
 )
 
 type Model struct {
-	list          list.Model
-	progress      progress.Model
-	templateView  viewport.Model
-	help          help.Model
-	keys          *keyMap
-	width, height int
+	list     list.Model
+	progress progress.Model
+	preview  viewport.Model
+	help     help.Model
+	keys     *keyMap
 
 	ctx     context.Context
 	gh      *service.GitHub
@@ -41,43 +41,27 @@ type Model struct {
 	config  *config.Config
 }
 
-func max(a, b int) int {
-	if a < b {
-		return b
-	}
-
-	return a
-}
-
-func New(ctx context.Context, gh *service.GitHub, config *config.Config, width, height int) *Model {
-	listWidth := max(width, minTerminalWidth)
-	listKeys := newKeyMap()
-
-	list := list.NewModel([]list.Item{}, repository.Delegate{}, listWidth, height-2)
+func New(ctx context.Context, gh *service.GitHub, config *config.Config) *Model {
+	list := list.NewModel([]list.Item{}, repository.Delegate{}, 0, 0)
 	list.Title = fmt.Sprintf("%s Repositories", strings.Title(config.Org))
 	list.SetShowHelp(false)
 	list.Styles.Title = listTitleStyle
 
-	help := help.NewModel()
-	viewport := viewport.Model{Width: width - listWidth, Height: height - 5}
-	viewport.SetContent(loadingMsg)
-
-	progress := progress.NewModel(progress.WithoutPercentage(), progress.WithGradient(colors.ProgressStart, colors.ProgressEnd))
-	progress.Width = width
-
-	return &Model{
-		list:         list,
-		progress:     progress,
-		templateView: viewport,
-		width:        width,
-		height:       height,
-		help:         help,
-		keys:         listKeys,
-		ctx:          ctx,
-		gh:           gh,
-		channel:      fetch(ctx, gh, config.Org),
-		config:       config,
+	m := &Model{
+		list:     list,
+		progress: progress.NewModel(progress.WithoutPercentage(), progress.WithGradient(colors.ProgressStart, colors.ProgressEnd)),
+		preview:  viewport.Model{},
+		help:     help.NewModel(),
+		keys:     newKeyMap(),
+		ctx:      ctx,
+		gh:       gh,
+		channel:  fetch(ctx, gh, config.Org),
+		config:   config,
 	}
+
+	m.preview.SetContent(loadingMsg)
+	m.SetSize(config.Width, config.Height)
+	return m
 }
 
 func (r Model) Init() tea.Cmd {
@@ -106,7 +90,7 @@ func (r *Model) updatePreview() {
 		return
 	}
 
-	r.templateView.SetContent(current.Preview)
+	r.preview.SetContent(current.Preview)
 }
 
 // handleEditTemplate opens the user's $EDITOR (or if none vim) and after they save/quit
@@ -146,7 +130,7 @@ func (r *Model) handleEditPreview() []tea.Cmd {
 		return cmds
 	}
 
-	result, err := edit.Content(current.Preview, edit.BasicInstructions)
+	result, err := edit.Content(current.Preview, edit.ManualEditInstructions)
 	if err != nil {
 		return append(cmds, r.list.NewStatusMessage(fmt.Sprintf("Error: %v", err)))
 	}
@@ -156,19 +140,28 @@ func (r *Model) handleEditPreview() []tea.Cmd {
 	return append(cmds, r.list.SetItem(currentIndex, newItem))
 }
 
+func (r *Model) SetSize(width, height int) {
+	r.config.Width, r.config.Height = width, height
+
+	// Status bars take up full width of screen
+	r.progress.Width = width
+	r.help.Width = width
+
+	statusHeight := lipgloss.Height(r.statusView())
+	listWidth := max(width, minTerminalWidth)
+	r.list.SetSize(listWidth, height-statusHeight-1)
+
+	previewTitleHeight := lipgloss.Height(r.previewTitleView())
+	r.preview.Height = height - statusHeight - previewTitleHeight - 1 // Subtract one for newline between previewTitle and preview
+}
+
 func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		r.width, r.height = msg.Width, msg.Height
-		_, h := lipgloss.Size(r.renderStatus())
-		r.list.SetSize(r.width, r.height-h)
-		r.templateView.Height = r.height - h - 4
-		r.progress.Width = r.width
-		r.help.Width = r.width
-
+		r.SetSize(msg.Width, msg.Height)
 	case progress.FrameMsg:
 		progressModel, cmd := r.progress.Update(msg)
 		r.progress = progressModel.(progress.Model)
@@ -213,6 +206,9 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			cmds = append(cmds, r.list.SetItem(r.list.Index(), repository.Item{R: current.R, Preview: current.Preview, Selected: !current.Selected}))
+		case key.Matches(msg, r.keys.Publish):
+			// TODO: create releases page
+			return r, tea.Quit
 		}
 	}
 
@@ -226,25 +222,34 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		r.updatePreview()
 	}
 
-	r.templateView, cmd = r.templateView.Update(msg)
+	r.preview, cmd = r.preview.Update(msg)
 	cmds = append(cmds, cmd)
 
 	return r, tea.Batch(cmds...)
 }
 
-func (r Model) renderStatus() string {
+func (r Model) statusView() string {
 	return lipgloss.JoinVertical(lipgloss.Left, r.help.View(r), r.progress.View())
 }
 
+func (r Model) previewTitleView() string {
+	return viewportTitleStyle.Render(previewTitle)
+}
+
+func (r Model) previewView() string {
+	preview := lipgloss.NewStyle().Width(r.preview.Width).Render(r.preview.View())
+
+	// HACK: add newline before preview to ensure it's on a line below.
+	return viewportStyle.Render(lipgloss.JoinVertical(lipgloss.Left, r.previewTitleView(), "\n"+preview))
+}
+
 func (r Model) View() string {
-	if r.width < minTerminalWidth {
+	if r.config.Width < minTerminalWidth {
 		return increaseTerminalWidthMsg
 	}
 
-	templateView := viewportStyle.Render(lipgloss.JoinVertical(lipgloss.Left, viewportTitleStyle.Render("Preview"), "\n"+lipgloss.NewStyle().Width(r.templateView.Width).Render(r.templateView.View())))
-	top := lipgloss.JoinHorizontal(lipgloss.Left, listStyle.Render(r.list.View()), templateView)
-
-	return lipgloss.JoinVertical(lipgloss.Left, top, r.renderStatus())
+	top := lipgloss.JoinHorizontal(lipgloss.Left, listStyle.Render(r.list.View()), r.previewView())
+	return lipgloss.JoinVertical(lipgloss.Left, top, r.statusView())
 }
 
 func fetch(ctx context.Context, gh *service.GitHub, org string) <-chan *service.ReleaseableRepoResponse {
@@ -279,4 +284,12 @@ func awaitCmd(channel <-chan *service.ReleaseableRepoResponse, templateString st
 
 		return repository.Item{R: r, Preview: constructPreview(r, templateString)}
 	}
+}
+
+func max(a, b int) int {
+	if a < b {
+		return b
+	}
+
+	return a
 }
