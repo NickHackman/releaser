@@ -48,7 +48,7 @@ Sprig Documentation: https://masterminds.github.io/sprig/.`,
 		token := viper.GetString("token")
 		url := viper.GetString("url")
 
-		gh, err := service.NewGitHub().Url(url).Token(token).Build()
+		gh, err := service.NewGitHub().URL(url).Token(token).Build()
 		if err != nil {
 			return err
 		}

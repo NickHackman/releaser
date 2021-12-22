@@ -3,14 +3,14 @@
 # Top Level Variables:
 # {{ .RepositoryName }}                  hello-world	
 # {{ .RepositoryOwner }}                 octocat
-# {{ .RepositoryUrl }}                   https://github.com/octocat/hello-world	
+# {{ .RepositoryURL }}                   https://github.com/octocat/hello-world	
 # {{ .RepositoryDescription }}           Example description
 # {{ .RepositoryDefaultBranch }}         main
-# {{ .Commits }}                         Array of commits
+# {{ .Commits }}                         List of commits
 #
 # Commit:
 # {{ .Sha }}                             Unique identifier for commit
-# {{ .Url }}                             URL to commit
+# {{ .URL }}                             URL to commit
 # {{ .Summary }}                         First line of the commit message
 # {{ .Message }}                         Full commit message (includes newlines)
 #
@@ -19,7 +19,7 @@
 # {{ .AuthorName }}                      octocat (Commit Name)
 # {{ .AuthorEmail }}                     octocat@github.com
 # {{ .AuthorDate }} 
-# {{ .AuthorUrl }}                       https://github.com/octocat
+# {{ .AuthorURL }}                       https://github.com/octocat
 #
 # Templates also include Sprig functions: https://masterminds.github.io/sprig/strings.html
 #

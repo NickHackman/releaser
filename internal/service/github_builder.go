@@ -18,7 +18,7 @@ func NewGitHub() *GitHubBuilder {
 	return &GitHubBuilder{}
 }
 
-func (ghb *GitHubBuilder) Url(url string) *GitHubBuilder {
+func (ghb *GitHubBuilder) URL(url string) *GitHubBuilder {
 	ghb.url = url
 	return ghb
 }

@@ -40,7 +40,7 @@ func Execute(gh *service.GitHub, config *config.Config) error {
 
 var (
 	titleStyle   = lipgloss.NewStyle().Foreground(colors.Title).Bold(true)
-	urlStyle     = lipgloss.NewStyle().Foreground(colors.Url)
+	urlStyle     = lipgloss.NewStyle().Foreground(colors.URL)
 	versionStyle = lipgloss.NewStyle().Foreground(colors.Selected)
 	errStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000"))
 )
