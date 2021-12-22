@@ -193,10 +193,6 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, r.keys.Template):
 			r.handleEditTemplate()
 			r.updatePreview()
-		case key.Matches(msg, r.keys.SaveTemplate):
-			return r, tea.Quit
-		case key.Matches(msg, r.keys.Version):
-			return r, tea.Quit
 		case key.Matches(msg, r.keys.Selection):
 			item := r.list.SelectedItem()
 

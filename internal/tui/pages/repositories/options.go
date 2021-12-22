@@ -7,13 +7,11 @@ import (
 
 type keyMap struct {
 	// Short
-	Selection    key.Binding
-	Publish      key.Binding
-	SaveTemplate key.Binding
-	Template     key.Binding
-	Edit         key.Binding
-	Version      key.Binding
-	Quit         key.Binding
+	Selection key.Binding
+	Publish   key.Binding
+	Template  key.Binding
+	Edit      key.Binding
+	Quit      key.Binding
 
 	// List builtins
 	down                 key.Binding
@@ -39,10 +37,6 @@ func newKeyMap() *keyMap {
 			key.WithKeys("enter"),
 			key.WithHelp("enter", "publish tags"),
 		),
-		SaveTemplate: key.NewBinding(
-			key.WithKeys("s"),
-			key.WithHelp("s", "save template"),
-		),
 		Template: key.NewBinding(
 			key.WithKeys("t"),
 			key.WithHelp("t", "edit template"),
@@ -50,10 +44,6 @@ func newKeyMap() *keyMap {
 		Edit: key.NewBinding(
 			key.WithKeys("e"),
 			key.WithHelp("e", "edit"),
-		),
-		Version: key.NewBinding(
-			key.WithKeys("v"),
-			key.WithHelp("v", "edit version"),
 		),
 		Quit: key.NewBinding(
 			key.WithKeys("q", "ctrl+c"),
@@ -120,7 +110,7 @@ func (km *keyMap) IsListBuiltin(msg tea.KeyMsg) bool {
 }
 
 func (km *keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{km.up, km.down, km.filter, km.Selection, km.SaveTemplate, km.Template, km.Version, km.Edit, km.Publish, km.Quit}
+	return []key.Binding{km.up, km.down, km.filter, km.Selection, km.Template, km.Edit, km.Publish, km.Quit}
 }
 
 func (km *keyMap) ShortHelpFilter() []key.Binding {
@@ -128,7 +118,7 @@ func (km *keyMap) ShortHelpFilter() []key.Binding {
 }
 
 func (km *keyMap) ShortHelpFilterApplied() []key.Binding {
-	return []key.Binding{km.up, km.down, km.clearFilter, km.Selection, km.SaveTemplate, km.Template, km.Version, km.Edit, km.Quit}
+	return []key.Binding{km.up, km.down, km.clearFilter, km.Selection, km.Template, km.Edit, km.Quit}
 }
 
 func (km *keyMap) FullHelp() [][]key.Binding {
