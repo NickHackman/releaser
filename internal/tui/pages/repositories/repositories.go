@@ -207,7 +207,7 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			cmds = append(cmds, r.list.SetItem(r.list.Index(), repository.Item{R: current.R, Preview: current.Preview, Selected: !current.Selected}))
 		case key.Matches(msg, r.keys.Publish):
-			// TODO: create releases page
+			r.handlePublish()
 			return r, tea.Quit
 		}
 	}
@@ -226,6 +226,20 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	return r, tea.Batch(cmds...)
+}
+
+func (r *Model) handlePublish() {
+	var releases []*service.RepositoryRelease
+	for _, item := range r.list.Items() {
+		i, ok := item.(repository.Item)
+		if !ok || !i.Selected {
+			continue
+		}
+
+		releases = append(releases, &service.RepositoryRelease{Name: i.R.Repo.GetName(), Version: "1.0.0", Body: i.Preview})
+	}
+
+	r.config.Releases <- r.gh.CreateReleases(r.ctx, r.config.Org, releases)
 }
 
 func (r Model) statusView() string {

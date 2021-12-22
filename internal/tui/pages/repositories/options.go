@@ -8,6 +8,7 @@ import (
 type keyMap struct {
 	// Short
 	Selection    key.Binding
+	Publish      key.Binding
 	SaveTemplate key.Binding
 	Template     key.Binding
 	Edit         key.Binding
@@ -33,6 +34,10 @@ func newKeyMap() *keyMap {
 		Selection: key.NewBinding(
 			key.WithKeys(" "),
 			key.WithHelp("<space>", "toggle select"),
+		),
+		Publish: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp("enter", "publish tags"),
 		),
 		SaveTemplate: key.NewBinding(
 			key.WithKeys("s"),
@@ -95,8 +100,8 @@ func newKeyMap() *keyMap {
 			key.WithHelp("esc", "cancel"),
 		),
 		acceptWhileFiltering: key.NewBinding(
-			key.WithKeys("enter", "tab", "shift+tab", "ctrl+k", "up", "ctrl+j", "down"),
-			key.WithHelp("enter", "apply filter"),
+			key.WithKeys("tab", "shift+tab", "ctrl+k", "up", "ctrl+j", "down"),
+			key.WithHelp("tab", "apply filter"),
 		),
 	}
 }
@@ -115,7 +120,7 @@ func (km *keyMap) IsListBuiltin(msg tea.KeyMsg) bool {
 }
 
 func (km *keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{km.up, km.down, km.filter, km.Selection, km.SaveTemplate, km.Template, km.Version, km.Edit, km.Quit}
+	return []key.Binding{km.up, km.down, km.filter, km.Selection, km.SaveTemplate, km.Template, km.Version, km.Edit, km.Publish, km.Quit}
 }
 
 func (km *keyMap) ShortHelpFilter() []key.Binding {

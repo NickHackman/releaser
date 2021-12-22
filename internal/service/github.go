@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"sync"
 	"sync/atomic"
 
 	"github.com/google/go-github/v41/github"
@@ -17,17 +18,63 @@ type GitHub struct {
 	client *github.Client
 }
 
-type ReleaseableRepoResponse struct {
-	// Total determines when all user Organizations are finished being loaded.
-	Total int32
-	// Repos in a GitHub organization that have been updated more recently than their newest tag/release.
-	Commits   []*github.RepositoryCommit
-	Repo      *github.Repository
-	LatestTag *github.RepositoryTag
+type RepositoryRelease struct {
+	Name    string
+	Version string
+	Body    string
 }
 
-// Creates a GitHub release provided the owner/repo version and body where the name of the release and the tag will be version.
-func (gh *GitHub) CreateRelease(ctx context.Context, owner, repo, version, body string) (*github.RepositoryRelease, error) {
+type RepositoryReleaseResponse struct {
+	Owner   string
+	Name    string
+	Version string
+	Body    string
+	URL     string
+	Error   error
+}
+
+func (rrr *RepositoryReleaseResponse) IsError() bool {
+	return rrr.Error != nil
+}
+
+func (gh *GitHub) CreateReleases(ctx context.Context, owner string, releases []*RepositoryRelease) []*RepositoryReleaseResponse {
+	c := make(chan *RepositoryReleaseResponse, len(releases))
+
+	var wg sync.WaitGroup
+	wg.Add(len(releases))
+
+	for _, release := range releases {
+		release := release
+
+		go func() {
+			defer wg.Done()
+
+			r, err := gh.createRelease(ctx, owner, release.Name, release.Version, release.Body)
+			response := &RepositoryReleaseResponse{Owner: owner, Name: release.Name, Body: release.Body, Version: release.Version, Error: err}
+
+			if err == nil {
+				response.URL = r.GetHTMLURL()
+			}
+
+			c <- response
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		close(c)
+	}()
+
+	var releaseResponses []*RepositoryReleaseResponse
+	for release := range c {
+		releaseResponses = append(releaseResponses, release)
+	}
+
+	return releaseResponses
+}
+
+// createRelease Creates a GitHub release provided the owner/repo version and body where the name of the release and the tag will be version.
+func (gh *GitHub) createRelease(ctx context.Context, owner, repo, version, body string) (*github.RepositoryRelease, error) {
 	release := &github.RepositoryRelease{
 		TagName: github.String(version),
 		Body:    github.String(body),
@@ -96,6 +143,15 @@ func (gh *GitHub) commitsSince(ctx context.Context, owner, repo string, sha stri
 	}
 
 	return commitsSince, nil
+}
+
+type ReleaseableRepoResponse struct {
+	// Total determines when all user Organizations are finished being loaded.
+	Total int32
+	// Repos in a GitHub organization that have been updated more recently than their newest tag/release.
+	Commits   []*github.RepositoryCommit
+	Repo      *github.Repository
+	LatestTag *github.RepositoryTag
 }
 
 func (gh *GitHub) releaseableRepo(ctx context.Context, org string, repo *github.Repository) (*ReleaseableRepoResponse, error) {
