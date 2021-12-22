@@ -29,10 +29,13 @@ func Execute(gh *service.GitHub, config *config.Config) error {
 		return fmt.Errorf("failed to execute tui: %v", err)
 	}
 
-	if releases := <-releasesChan; releases != nil {
-		for _, release := range releases {
-			printRelease(release)
+	select {
+	case releases := <-releasesChan:
+		if len(releases) > 0 {
+			printReleases(releases)
 		}
+	default:
+		fmt.Println("No releases were created.")
 	}
 
 	return nil
@@ -45,19 +48,21 @@ var (
 	errStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#ff0000"))
 )
 
-func printRelease(release *service.RepositoryReleaseResponse) {
-	fullName := titleStyle.Render("## " + release.Owner + "/" + release.Name)
-	version := versionStyle.Render(release.Version)
+func printReleases(releases []*service.RepositoryReleaseResponse) {
+	for _, release := range releases {
+		fullName := titleStyle.Render("## " + release.Owner + "/" + release.Name)
+		version := versionStyle.Render(release.Version)
 
-	fmt.Printf("%s %s\n", fullName, version)
-	fmt.Print(release.Body)
+		fmt.Printf("%s %s\n", fullName, version)
+		fmt.Print(release.Body)
 
-	if release.IsError() {
-		err := errStyle.Render("Error: " + release.Error.Error())
-		fmt.Printf("%s\n\n", err)
-		return
+		if release.IsError() {
+			err := errStyle.Render("Error: " + release.Error.Error())
+			fmt.Printf("%s\n\n", err)
+			return
+		}
+
+		url := urlStyle.Render(release.URL)
+		fmt.Printf("%s\n\n", url)
 	}
-
-	url := urlStyle.Render(release.URL)
-	fmt.Printf("%s\n\n", url)
 }
