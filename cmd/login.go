@@ -67,7 +67,7 @@ func githubOauthFlow() (string, error) {
 	params := oauth.BrowserParams{
 		ClientID:    githubClientId,
 		RedirectURI: "http://127.0.0.1/callback",
-		Scopes:      []string{"read:org", "repo:status"},
+		Scopes:      []string{"repo", "read:org"},
 		AllowSignup: true,
 	}
 
