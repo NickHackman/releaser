@@ -41,23 +41,17 @@ type Model struct {
 
 func New(ctx context.Context, gh *service.GitHub, config *config.Config) *Model {
 	keys := newKeyMap()
-	keys.Publish.SetEnabled(false)
+	delegate := repository.NewDelegate()
 
-	list := list.NewModel([]list.Item{}, repository.Delegate{}, 0, 0)
+	list := list.NewModel([]list.Item{}, delegate, 0, 0)
 	list.Title = fmt.Sprintf("%s Repositories", strings.Title(config.Org))
 	list.SetShowHelp(false)
 	list.Styles.Title = listTitleStyle
 	list.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			keys.Selection,
-			keys.Publish,
-			keys.Edit,
-			keys.Template,
-		}
+		return []key.Binding{delegate.Keys.Selection, keys.Template, delegate.Keys.Edit, keys.Publish}
 	}
-
 	list.AdditionalShortHelpKeys = func() []key.Binding {
-		return []key.Binding{keys.Selection, keys.Template, keys.Edit, keys.Publish}
+		return []key.Binding{delegate.Keys.Selection, keys.Template, delegate.Keys.Edit, keys.Publish}
 	}
 
 	m := &Model{
@@ -105,36 +99,15 @@ func (r *Model) handleEditTemplate() []tea.Cmd {
 	for i, item := range r.list.Items() {
 		current, ok := item.(repository.Item)
 		if !ok {
-			return cmds
+			continue
 		}
 
-		newItem := repository.Item{R: current.R, Preview: constructPreview(current.R, newTemplate)}
+		newItem := repository.Item{R: current.R, Preview: template.Preview(current.R, newTemplate)}
 		// SetItems doubles the amount of items in the List
 		cmds = append(cmds, r.list.SetItem(i, newItem))
 	}
 
 	return cmds
-}
-
-// handleEditPreview opens the user's $EDITOR (or if none vim) and after they save/quit
-// reads the new preview and applies it.
-func (r *Model) handleEditPreview() []tea.Cmd {
-	var cmds []tea.Cmd
-
-	currentItem := r.list.SelectedItem()
-	current, ok := currentItem.(repository.Item)
-	if !ok {
-		return cmds
-	}
-
-	result, err := edit.Content(current.Preview, edit.ManualEditInstructions)
-	if err != nil {
-		return append(cmds, r.list.NewStatusMessage(fmt.Sprintf("Error: %v", err)))
-	}
-
-	currentIndex := r.list.Index()
-	newItem := repository.Item{R: current.R, Preview: result}
-	return append(cmds, r.list.SetItem(currentIndex, newItem))
 }
 
 func (r *Model) SetSize(width, height int) {
@@ -182,6 +155,8 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		progressModel, cmd := r.progress.Update(msg)
 		r.progress = progressModel.(progress.Model)
 		cmds = append(cmds, cmd)
+	case repository.RefreshPreviewCmd:
+		r.updatePreview()
 	case repository.Item:
 		r.repos++
 
@@ -191,7 +166,7 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Loaded first repository, update the preview
 		if r.repos == 1 {
-			r.updatePreview()
+			cmds = append(cmds, repository.RefreshPreview)
 		}
 	case tea.KeyMsg:
 		if r.list.FilterState() == list.Filtering {
@@ -199,34 +174,12 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch {
-		case key.Matches(msg, r.keys.Quit):
-			return r, tea.Quit
 		case key.Matches(msg, r.keys.More):
 			// Force reset size
 			r.SetSize(r.config.Width, r.config.Height)
-		case key.Matches(msg, r.keys.Edit):
-			r.handleEditPreview()
-			r.updatePreview()
 		case key.Matches(msg, r.keys.Template):
 			r.handleEditTemplate()
-			r.updatePreview()
-		case key.Matches(msg, r.keys.Selection):
-			item := r.list.SelectedItem()
-
-			current, ok := item.(repository.Item)
-			if !ok {
-				return r, nil
-			}
-
-			index := r.list.Index()
-			cmds = append(cmds, r.list.SetItem(index, repository.Item{R: current.R, Preview: current.Preview, Selected: !current.Selected}))
-
-			switch r.countSelected() {
-			case 0:
-				r.keys.Publish.SetEnabled(false)
-			default:
-				r.keys.Publish.SetEnabled(true)
-			}
+			cmds = append(cmds, repository.RefreshPreview)
 		case key.Matches(msg, r.keys.Publish):
 			if r.countSelected() == 0 {
 				break
@@ -235,6 +188,13 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			r.handlePublish()
 			return r, tea.Quit
 		}
+	}
+
+	switch r.countSelected() {
+	case 0:
+		r.keys.Publish.SetEnabled(false)
+	default:
+		r.keys.Publish.SetEnabled(true)
 	}
 
 	return r, tea.Batch(cmds...)
@@ -318,16 +278,6 @@ func fetch(ctx context.Context, gh *service.GitHub, org string) <-chan *service.
 	return channel
 }
 
-func constructPreview(r *service.ReleaseableRepoResponse, templatedString string) string {
-	tagTemplate := template.NewTag(r.Repo, r.Commits)
-	content, err := tagTemplate.Execute(templatedString)
-	if err != nil {
-		content = fmt.Sprintf("%s\n\n# Error: %v", templatedString, err)
-	}
-
-	return content
-}
-
 func awaitCmd(channel <-chan *service.ReleaseableRepoResponse, templateString string) tea.Cmd {
 	return func() tea.Msg {
 		r, ok := <-channel
@@ -335,7 +285,7 @@ func awaitCmd(channel <-chan *service.ReleaseableRepoResponse, templateString st
 			return nil
 		}
 
-		return repository.Item{R: r, Preview: constructPreview(r, templateString)}
+		return repository.Item{R: r, Preview: template.Preview(r, templateString)}
 	}
 }
 
