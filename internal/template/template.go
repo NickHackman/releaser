@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/sprig"
+	"github.com/NickHackman/tagger/internal/service"
 	"github.com/google/go-github/v41/github"
 )
 
@@ -88,4 +89,14 @@ func (tag *Tag) Execute(templatedString string) (string, error) {
 	}
 
 	return buf.String(), nil
+}
+
+func Preview(r *service.ReleaseableRepoResponse, templatedString string) string {
+	tagTemplate := NewTag(r.Repo, r.Commits)
+	content, err := tagTemplate.Execute(templatedString)
+	if err != nil {
+		content = fmt.Sprintf("%s\n\n# Error: %v", templatedString, err)
+	}
+
+	return content
 }
