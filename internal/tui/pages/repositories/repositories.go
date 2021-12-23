@@ -41,6 +41,8 @@ type Model struct {
 
 func New(ctx context.Context, gh *service.GitHub, config *config.Config) *Model {
 	keys := newKeyMap()
+	keys.Publish.SetEnabled(false)
+
 	list := list.NewModel([]list.Item{}, repository.Delegate{}, 0, 0)
 	list.Title = fmt.Sprintf("%s Repositories", strings.Title(config.Org))
 	list.SetShowHelp(false)
@@ -62,7 +64,7 @@ func New(ctx context.Context, gh *service.GitHub, config *config.Config) *Model 
 		list:     list,
 		progress: progress.NewModel(progress.WithoutPercentage(), progress.WithGradient(colors.ProgressStart, colors.ProgressEnd)),
 		preview:  viewport.Model{},
-		keys:     newKeyMap(),
+		keys:     keys,
 		ctx:      ctx,
 		gh:       gh,
 		channel:  fetch(ctx, gh, config.Org),
@@ -150,6 +152,26 @@ func (r *Model) SetSize(width, height int) {
 	r.preview.Height = height - statusHeight - previewTitleHeight - 1 // Subtract one for newline between previewTitle and preview
 }
 
+func (r Model) countSelected() int {
+	var selected int
+
+	items := r.list.Items()
+	for _, item := range items {
+		current, ok := item.(repository.Item)
+		if !ok {
+			continue
+		}
+
+		if !current.Selected {
+			continue
+		}
+
+		selected += 1
+	}
+
+	return selected
+}
+
 func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds := r.updateSubmodels(msg)
 
@@ -196,25 +218,17 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return r, nil
 			}
 
-			cmds = append(cmds, r.list.SetItem(r.list.Index(), repository.Item{R: current.R, Preview: current.Preview, Selected: !current.Selected}))
-		case key.Matches(msg, r.keys.Publish):
-			var selected int
+			index := r.list.Index()
+			cmds = append(cmds, r.list.SetItem(index, repository.Item{R: current.R, Preview: current.Preview, Selected: !current.Selected}))
 
-			items := r.list.Items()
-			for _, item := range items {
-				current, ok := item.(repository.Item)
-				if !ok {
-					continue
-				}
-
-				if !current.Selected {
-					continue
-				}
-
-				selected += 1
+			switch r.countSelected() {
+			case 0:
+				r.keys.Publish.SetEnabled(false)
+			default:
+				r.keys.Publish.SetEnabled(true)
 			}
-
-			if selected == 0 {
+		case key.Matches(msg, r.keys.Publish):
+			if r.countSelected() == 0 {
 				break
 			}
 
