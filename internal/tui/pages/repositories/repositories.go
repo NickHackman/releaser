@@ -198,12 +198,34 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			cmds = append(cmds, r.list.SetItem(r.list.Index(), repository.Item{R: current.R, Preview: current.Preview, Selected: !current.Selected}))
 		case key.Matches(msg, r.keys.Publish):
+			var selected int
+
+			items := r.list.Items()
+			for _, item := range items {
+				current, ok := item.(repository.Item)
+				if !ok {
+					continue
+				}
+
+				if !current.Selected {
+					continue
+				}
+
+				selected += 1
+			}
+
+			if selected == 0 {
+				break
+			}
+
 			r.handlePublish()
 			return r, tea.Quit
 		}
 	}
 
 	return r, tea.Batch(cmds...)
+}
+
 func (r *Model) updateSubmodels(msg tea.Msg) []tea.Cmd {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
