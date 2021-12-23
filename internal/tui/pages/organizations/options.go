@@ -10,7 +10,6 @@ type organizationsListKeyMap struct {
 	// Full
 	selectionFull key.Binding
 	refreshFull   key.Binding
-	quit          key.Binding
 }
 
 func newOrganizationsListKeyMap() *organizationsListKeyMap {
@@ -33,9 +32,6 @@ func newOrganizationsListKeyMap() *organizationsListKeyMap {
 		refreshFull: key.NewBinding(
 			key.WithKeys("r"),
 			key.WithHelp("r", "refresh GitHub organizations"),
-		),
-		quit: key.NewBinding(
-			key.WithKeys("q", "ctrl+c"),
 		),
 	}
 }

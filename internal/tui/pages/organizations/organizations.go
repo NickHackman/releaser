@@ -42,7 +42,6 @@ func New(ctx context.Context, gh *service.GitHub, config *config.Config) *Model 
 		return []key.Binding{
 			listKeys.selectionFull,
 			listKeys.refreshFull,
-			listKeys.quit,
 		}
 	}
 	list.AdditionalShortHelpKeys = func() []key.Binding {
@@ -106,8 +105,6 @@ func (o Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch {
-		case key.Matches(msg, o.keys.quit):
-			return o, tea.Quit
 		case key.Matches(msg, o.keys.selection):
 			organization, ok := o.list.SelectedItem().(organization.Item)
 			if !ok {
