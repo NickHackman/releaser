@@ -177,8 +177,6 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch {
-		case r.keys.IsListBuiltin(msg):
-			break
 		case key.Matches(msg, r.keys.Quit):
 			return r, tea.Quit
 		case key.Matches(msg, r.keys.More):
