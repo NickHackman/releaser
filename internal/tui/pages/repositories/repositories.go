@@ -11,7 +11,6 @@ import (
 	"github.com/NickHackman/tagger/internal/tui/bubbles/repository"
 	"github.com/NickHackman/tagger/internal/tui/colors"
 	"github.com/NickHackman/tagger/internal/tui/config"
-	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/progress"
@@ -31,7 +30,6 @@ type Model struct {
 	list     list.Model
 	progress progress.Model
 	preview  viewport.Model
-	help     help.Model
 	keys     *keyMap
 
 	ctx     context.Context
@@ -42,16 +40,28 @@ type Model struct {
 }
 
 func New(ctx context.Context, gh *service.GitHub, config *config.Config) *Model {
+	keys := newKeyMap()
 	list := list.NewModel([]list.Item{}, repository.Delegate{}, 0, 0)
 	list.Title = fmt.Sprintf("%s Repositories", strings.Title(config.Org))
 	list.SetShowHelp(false)
 	list.Styles.Title = listTitleStyle
+	list.AdditionalFullHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			keys.Selection,
+			keys.Publish,
+			keys.Edit,
+			keys.Template,
+		}
+	}
+
+	list.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{keys.Selection, keys.Template, keys.Edit, keys.Publish}
+	}
 
 	m := &Model{
 		list:     list,
 		progress: progress.NewModel(progress.WithoutPercentage(), progress.WithGradient(colors.ProgressStart, colors.ProgressEnd)),
 		preview:  viewport.Model{},
-		help:     help.NewModel(),
 		keys:     newKeyMap(),
 		ctx:      ctx,
 		gh:       gh,
@@ -66,21 +76,6 @@ func New(ctx context.Context, gh *service.GitHub, config *config.Config) *Model 
 
 func (r Model) Init() tea.Cmd {
 	return awaitCmd(r.channel, r.config.TemplateString)
-}
-
-func (r Model) ShortHelp() []key.Binding {
-	switch r.list.FilterState() {
-	case list.Filtering:
-		return r.keys.ShortHelpFilter()
-	case list.FilterApplied:
-		return r.keys.ShortHelpFilterApplied()
-	default:
-		return r.keys.ShortHelp()
-	}
-}
-
-func (r Model) FullHelp() [][]key.Binding {
-	return [][]key.Binding{}
 }
 
 func (r *Model) updatePreview() {
@@ -145,7 +140,7 @@ func (r *Model) SetSize(width, height int) {
 
 	// Status bars take up full width of screen
 	r.progress.Width = width
-	r.help.Width = width
+	r.list.Help.Width = width
 
 	statusHeight := lipgloss.Height(r.statusView())
 	listWidth := max(width, minTerminalWidth)
@@ -156,8 +151,7 @@ func (r *Model) SetSize(width, height int) {
 }
 
 func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmds []tea.Cmd
-	var cmd tea.Cmd
+	cmds := r.updateSubmodels(msg)
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -187,6 +181,9 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		case key.Matches(msg, r.keys.Quit):
 			return r, tea.Quit
+		case key.Matches(msg, r.keys.More):
+			// Force reset size
+			r.SetSize(r.config.Width, r.config.Height)
 		case key.Matches(msg, r.keys.Edit):
 			r.handleEditPreview()
 			r.updatePreview()
@@ -208,9 +205,16 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	return r, tea.Batch(cmds...)
+func (r *Model) updateSubmodels(msg tea.Msg) []tea.Cmd {
+	var cmd tea.Cmd
+	var cmds []tea.Cmd
+
 	currentIndex := r.list.Index()
+
 	r.list, cmd = r.list.Update(msg)
 	cmds = append(cmds, cmd)
+
 	newIndex := r.list.Index()
 
 	// Only set preview if the current index has changed
@@ -218,10 +222,14 @@ func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		r.updatePreview()
 	}
 
-	r.preview, cmd = r.preview.Update(msg)
-	cmds = append(cmds, cmd)
+	// Only handle mouse events
+	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		r.preview, cmd = r.preview.Update(msg)
+		cmds = append(cmds, cmd)
+	}
 
-	return r, tea.Batch(cmds...)
+	return cmds
 }
 
 func (r *Model) handlePublish() {
@@ -239,7 +247,8 @@ func (r *Model) handlePublish() {
 }
 
 func (r Model) statusView() string {
-	return lipgloss.JoinVertical(lipgloss.Left, r.help.View(r), r.progress.View())
+	helpView := r.list.Styles.HelpStyle.Render(r.list.Help.View(r.list))
+	return lipgloss.JoinVertical(lipgloss.Left, helpView, r.progress.View())
 }
 
 func (r Model) previewTitleView() string {
