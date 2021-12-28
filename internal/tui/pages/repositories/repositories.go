@@ -211,7 +211,7 @@ func (r *Model) updateSubmodels(msg tea.Msg) []tea.Cmd {
 
 	newIndex := r.list.Index()
 
-	// Only set preview if the current index has changed
+	// Only update preview if the current index has changed
 	if currentIndex != newIndex {
 		r.updatePreview()
 	}
