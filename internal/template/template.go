@@ -12,7 +12,7 @@ import (
 	"github.com/google/go-github/v41/github"
 )
 
-type Tag struct {
+type tag struct {
 	params map[string]interface{}
 }
 
@@ -56,14 +56,14 @@ func commitFrom(c *github.RepositoryCommit) *commit {
 	}
 }
 
-func NewTag(repo *github.Repository, commits []*github.RepositoryCommit) *Tag {
+func new(repo *github.Repository, commits []*github.RepositoryCommit) *tag {
 	var templateCommits []*commit
 
 	for _, c := range commits {
 		templateCommits = append(templateCommits, commitFrom(c))
 	}
 
-	return &Tag{
+	return &tag{
 		params: map[string]interface{}{
 			"RepositoryName":          repo.GetName(),
 			"RepositoryOwner":         repo.GetOwner().GetLogin(),
@@ -75,7 +75,7 @@ func NewTag(repo *github.Repository, commits []*github.RepositoryCommit) *Tag {
 	}
 }
 
-func (tag *Tag) Execute(templatedString string) (string, error) {
+func (tag *tag) execute(templatedString string) (string, error) {
 	sf := sprig.TxtFuncMap()
 
 	t, err := template.New("template").Funcs(sf).Parse(templatedString)
@@ -92,8 +92,8 @@ func (tag *Tag) Execute(templatedString string) (string, error) {
 }
 
 func Preview(r *service.ReleaseableRepoResponse, templatedString string) string {
-	tagTemplate := NewTag(r.Repo, r.Commits)
-	content, err := tagTemplate.Execute(templatedString)
+	tagTemplate := new(r.Repo, r.Commits)
+	content, err := tagTemplate.execute(templatedString)
 	if err != nil {
 		content = fmt.Sprintf("%s\n\n# Error: %v", templatedString, err)
 	}
