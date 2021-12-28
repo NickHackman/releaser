@@ -250,10 +250,9 @@ func (r Model) previewTitleView() string {
 }
 
 func (r Model) previewView() string {
-	preview := lipgloss.NewStyle().Width(r.preview.Width).Render(r.preview.View())
+	preview := lipgloss.NewStyle().MarginTop(1).Width(r.preview.Width).Render(r.preview.View())
 
-	// HACK: add newline before preview to ensure it's on a line below.
-	return viewportStyle.Render(lipgloss.JoinVertical(lipgloss.Left, r.previewTitleView(), "\n"+preview))
+	return viewportStyle.Render(lipgloss.JoinVertical(lipgloss.Left, r.previewTitleView(), preview))
 }
 
 func (r Model) View() string {
