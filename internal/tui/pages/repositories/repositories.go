@@ -32,14 +32,13 @@ type Model struct {
 	preview  viewport.Model
 	keys     *keyMap
 
-	ctx     context.Context
 	gh      *service.GitHub
 	channel <-chan *service.ReleaseableRepoResponse
 	repos   int
 	config  *config.Config
 }
 
-func New(ctx context.Context, gh *service.GitHub, config *config.Config) *Model {
+func New(gh *service.GitHub, config *config.Config) *Model {
 	keys := newKeyMap()
 	delegate := repository.NewDelegate()
 
@@ -59,9 +58,8 @@ func New(ctx context.Context, gh *service.GitHub, config *config.Config) *Model 
 		progress: progress.NewModel(progress.WithoutPercentage(), progress.WithGradient(colors.ProgressStart, colors.ProgressEnd)),
 		preview:  viewport.Model{},
 		keys:     keys,
-		ctx:      ctx,
 		gh:       gh,
-		channel:  fetch(ctx, gh, config.Org),
+		channel:  fetch(config, gh, config.Org),
 		config:   config,
 	}
 
@@ -227,6 +225,9 @@ func (r *Model) updateSubmodels(msg tea.Msg) []tea.Cmd {
 }
 
 func (r *Model) handlePublish() {
+	ctx, cancel := context.WithTimeout(context.Background(), r.config.Timeout)
+	defer cancel()
+
 	var releases []*service.RepositoryRelease
 	for _, item := range r.list.Items() {
 		i, ok := item.(repository.Item)
@@ -237,7 +238,7 @@ func (r *Model) handlePublish() {
 		releases = append(releases, &service.RepositoryRelease{Name: i.R.Repo.GetName(), Version: "1.0.0", Body: i.Preview})
 	}
 
-	r.config.Releases <- r.gh.CreateReleases(r.ctx, r.config.Org, releases)
+	r.config.Releases <- r.gh.CreateReleases(ctx, r.config.Org, releases)
 }
 
 func (r Model) statusView() string {
@@ -264,10 +265,12 @@ func (r Model) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, top, r.statusView())
 }
 
-func fetch(ctx context.Context, gh *service.GitHub, org string) <-chan *service.ReleaseableRepoResponse {
+func fetch(config *config.Config, gh *service.GitHub, org string) <-chan *service.ReleaseableRepoResponse {
+	ctx, cancel := context.WithTimeout(context.Background(), config.Timeout)
 	channel, callback := gh.ReleasableReposByOrg(ctx, org)
 
 	go func() {
+		defer cancel()
 		if err := callback(); err != nil {
 			// TODO: better handle error
 			panic(err)

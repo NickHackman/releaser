@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/NickHackman/tagger/internal/service"
@@ -14,15 +13,12 @@ import (
 )
 
 func Execute(gh *service.GitHub, config *config.Config) error {
-	ctx, cancel := context.WithTimeout(context.Background(), config.Timeout)
-	defer cancel()
-
 	releasesChan := make(chan []*service.RepositoryReleaseResponse, 1)
 	config.Releases = releasesChan
 
-	var page tea.Model = organizations.New(ctx, gh, config)
+	var page tea.Model = organizations.New(gh, config)
 	if config.Org != "" {
-		page = repositories.New(ctx, gh, config)
+		page = repositories.New(gh, config)
 	}
 
 	if err := tea.NewProgram(page, tea.WithAltScreen(), tea.WithMouseAllMotion()).Start(); err != nil {

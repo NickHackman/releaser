@@ -25,14 +25,13 @@ type Model struct {
 	keys     *organizationsListKeyMap
 
 	gh      *service.GitHub
-	ctx     context.Context
 	channel <-chan *service.OrgResponse
 	orgs    int
 
 	config *config.Config
 }
 
-func New(ctx context.Context, gh *service.GitHub, config *config.Config) *Model {
+func New(gh *service.GitHub, config *config.Config) *Model {
 	listKeys := newOrganizationsListKeyMap()
 
 	list := list.NewModel([]list.Item{}, organization.Delegate{}, 0, 0)
@@ -55,16 +54,17 @@ func New(ctx context.Context, gh *service.GitHub, config *config.Config) *Model 
 		list:     list,
 		progress: progress,
 		keys:     listKeys,
-		ctx:      ctx,
-		channel:  fetch(ctx, gh),
+		channel:  fetch(config, gh),
 		config:   config,
 	}
 }
 
-func fetch(ctx context.Context, gh *service.GitHub) <-chan *service.OrgResponse {
+func fetch(config *config.Config, gh *service.GitHub) <-chan *service.OrgResponse {
+	ctx, cancel := context.WithTimeout(context.Background(), config.Timeout)
 	channel, callback := gh.Orgs(ctx)
 
 	go func() {
+		defer cancel()
 		if err := callback(); err != nil {
 			// TODO: better handle error
 			panic(err)
@@ -113,11 +113,11 @@ func (o Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			o.config.Org = organization.R.Org.GetLogin()
 
-			repositories := repositories.New(o.ctx, o.gh, o.config)
+			repositories := repositories.New(o.gh, o.config)
 			return repositories, repositories.Init()
 		case key.Matches(msg, o.keys.refresh):
 			o.orgs = 0
-			o.channel = fetch(o.ctx, o.gh)
+			o.channel = fetch(o.config, o.gh)
 			cmds = append(cmds, o.progress.SetPercent(0), o.list.SetItems([]list.Item{}), o.Init())
 		}
 	}
