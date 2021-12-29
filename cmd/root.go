@@ -40,13 +40,13 @@ in a GitHub organization and create Tags/Releases for only the repositories
 that have changes. The description/message associated with the Tag/Release is
 a Go Sprig Template that will be used by default for all messages.
 
-GitHub Oauth: 
-
-Examples:
+GitHub Oauth:
 
 tagger login
 
 tagger --url "git.enterprise.com" login
+
+Examples:
 
 tagger publish --org "GitHub org"
 
@@ -66,8 +66,8 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $XDG_CONFIG_HOME/tagger.yaml)")
-	rootCmd.PersistentFlags().String("url", "https://api.github.com/", "GitHub API url (default is https://api.github.com/)")
-	rootCmd.PersistentFlags().String("token", "", "GitHub Oauth Token (will be generated if not provided)")
+	rootCmd.PersistentFlags().String("url", "https://api.github.com/", "GitHub API url")
+	rootCmd.PersistentFlags().String("token", "", "GitHub Oauth Token")
 
 	cobra.CheckErr(viper.BindPFlag("token", rootCmd.PersistentFlags().Lookup("token")))
 	cobra.CheckErr(viper.BindPFlag("url", rootCmd.PersistentFlags().Lookup("url")))

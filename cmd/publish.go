@@ -39,11 +39,34 @@ var publishCmd = &cobra.Command{
 
 Template Variables:
 
-TODO: exhaustive list of template variables
+Top Level Variables:
+{{ .RepositoryName }}                  hello-world	
+{{ .RepositoryOwner }}                 octocat
+{{ .RepositoryURL }}                   https://github.com/octocat/hello-world	
+{{ .RepositoryDescription }}           Example description
+{{ .RepositoryDefaultBranch }}         main
+{{ .Commits }}                         List of commits
 
-In addition to the above variables that are injected automatically, Tagger uses Sprig and makes all functions available
+Commit:
+{{ .Sha }}                             Unique identifier for commit
+{{ .URL }}                             URL to commit
+{{ .Summary }}                         First line of the commit message
+{{ .Message }}                         Full commit message (includes newlines)
 
-Sprig Documentation: https://masterminds.github.io/sprig/.`,
+Author/Committer:
+{{ .AuthorUsername }}                  octocat (GitHub Username)
+{{ .AuthorName }}                      octocat (Commit Name)
+{{ .AuthorEmail }}                     octocat@github.com
+{{ .AuthorDate }} 
+{{ .AuthorURL }}                       https://github.com/octocat
+
+Templates also include Sprig functions: https://masterminds.github.io/sprig/strings.html
+
+Example:
+
+{{ range .Commits }}
+{{ substr 0 8 .Sha }} committed by {{ .CommitterUsername }} and authored by {{ .AuthorUsername }} {{ .Summary }}
+{{ end }}`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		token := viper.GetString("token")
 		url := viper.GetString("url")
@@ -68,7 +91,7 @@ func init() {
 
 	publishCmd.Flags().StringP("org", "o", "", "GitHub organization to create tags")
 	publishCmd.Flags().String("template", "", "Go template that is the default message for all tags/releases")
-	publishCmd.Flags().DurationP("timeout", "t", time.Minute, "Timeout duration to wait for GitHub to respond before exiting (default 1m)")
+	publishCmd.Flags().DurationP("timeout", "t", time.Minute, "Timeout duration to wait for GitHub to respond before exiting")
 
 	cobra.CheckErr(viper.BindPFlag("template", publishCmd.Flags().Lookup("template")))
 	cobra.CheckErr(viper.BindPFlag("org", publishCmd.Flags().Lookup("org")))

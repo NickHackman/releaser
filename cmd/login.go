@@ -102,7 +102,7 @@ func githubOauthFlow() (string, error) {
 }
 
 func init() {
-	loginCmd.Flags().String("auth.url", "https://github.com/", "GitHub url (default is https://github.com/)")
+	loginCmd.Flags().String("auth.url", "https://github.com/", "GitHub url")
 	cobra.CheckErr(viper.BindPFlag("auth.url", loginCmd.Flags().Lookup("auth.url")))
 
 	rootCmd.AddCommand(loginCmd)
