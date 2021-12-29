@@ -74,62 +74,62 @@ func fetch(config *config.Config, gh *service.GitHub) <-chan *service.OrgRespons
 	return channel
 }
 
-func (o Model) Init() tea.Cmd {
-	return awaitCmd(o.channel)
+func (m Model) Init() tea.Cmd {
+	return awaitCmd(m.channel)
 }
 
-func (o Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		o.config.Width, o.config.Height = msg.Width, msg.Height
-		o.progress.Width = msg.Width
+		m.config.Width, m.config.Height = msg.Width, msg.Height
+		m.progress.Width = msg.Width
 
-		_, h := lipgloss.Size(o.progress.View())
-		o.list.SetSize(msg.Width, msg.Height-h)
+		_, h := lipgloss.Size(m.progress.View())
+		m.list.SetSize(msg.Width, msg.Height-h)
 	case organization.Item:
-		o.orgs++
+		m.orgs++
 
-		index := len(o.list.Items()) - 1
-		percent := float64(o.orgs) / float64(msg.R.Total)
-		cmds = append(cmds, awaitCmd(o.channel), o.progress.SetPercent(percent), o.list.InsertItem(index, msg))
+		index := len(m.list.Items()) - 1
+		percent := float64(m.orgs) / float64(msg.R.Total)
+		cmds = append(cmds, awaitCmd(m.channel), m.progress.SetPercent(percent), m.list.InsertItem(index, msg))
 	case progress.FrameMsg:
-		progressModel, cmd := o.progress.Update(msg)
-		o.progress = progressModel.(progress.Model)
+		progressModel, cmd := m.progress.Update(msg)
+		m.progress = progressModel.(progress.Model)
 		cmds = append(cmds, cmd)
 	case tea.KeyMsg:
-		if o.list.FilterState() == list.Filtering {
+		if m.list.FilterState() == list.Filtering {
 			break
 		}
 
 		switch {
-		case key.Matches(msg, o.keys.selection):
-			organization, ok := o.list.SelectedItem().(organization.Item)
+		case key.Matches(msg, m.keys.selection):
+			organization, ok := m.list.SelectedItem().(organization.Item)
 			if !ok {
-				return o, nil
+				return m, nil
 			}
 
-			o.config.Org = organization.R.Org.GetLogin()
+			m.config.Org = organization.R.Org.GetLogin()
 
-			repositories := repositories.New(o.gh, o.config)
+			repositories := repositories.New(m.gh, m.config)
 			return repositories, repositories.Init()
-		case key.Matches(msg, o.keys.refresh):
-			o.orgs = 0
-			o.channel = fetch(o.config, o.gh)
-			cmds = append(cmds, o.progress.SetPercent(0), o.list.SetItems([]list.Item{}), o.Init())
+		case key.Matches(msg, m.keys.refresh):
+			m.orgs = 0
+			m.channel = fetch(m.config, m.gh)
+			cmds = append(cmds, m.progress.SetPercent(0), m.list.SetItems([]list.Item{}), m.Init())
 		}
 	}
 
-	o.list, cmd = o.list.Update(msg)
+	m.list, cmd = m.list.Update(msg)
 	cmds = append(cmds, cmd)
 
-	return o, tea.Batch(cmds...)
+	return m, tea.Batch(cmds...)
 }
 
-func (o Model) View() string {
-	return lipgloss.JoinVertical(lipgloss.Left, o.list.View(), o.progress.View())
+func (m Model) View() string {
+	return lipgloss.JoinVertical(lipgloss.Left, m.list.View(), m.progress.View())
 }
 
 func awaitCmd(channel <-chan *service.OrgResponse) tea.Cmd {

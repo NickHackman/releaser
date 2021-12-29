@@ -68,33 +68,33 @@ func New(gh *service.GitHub, config *config.Config) *Model {
 	return m
 }
 
-func (r Model) Init() tea.Cmd {
-	return awaitCmd(r.channel, r.config.TemplateString)
+func (m Model) Init() tea.Cmd {
+	return awaitCmd(m.channel, m.config.TemplateString)
 }
 
-func (r *Model) updatePreview() {
-	currentItem := r.list.SelectedItem()
+func (m *Model) updatePreview() {
+	currentItem := m.list.SelectedItem()
 	current, ok := currentItem.(repository.Item)
 	if !ok {
 		return
 	}
 
-	r.preview.SetContent(current.Preview)
+	m.preview.SetContent(current.Preview)
 }
 
 // handleEditTemplate opens the user's $EDITOR (or if none vim) and after they save/quit
 // reads the template and applies the new template to every repository in the list.
-func (r *Model) handleEditTemplate() []tea.Cmd {
+func (m *Model) handleEditTemplate() []tea.Cmd {
 	var cmds []tea.Cmd
 
-	newTemplate, err := edit.Content(r.config.TemplateString, edit.TemplateInstructions)
+	newTemplate, err := edit.Content(m.config.TemplateString, edit.TemplateInstructions)
 	if err != nil {
-		return append(cmds, r.list.NewStatusMessage(fmt.Sprintf("Error: %v", err)))
+		return append(cmds, m.list.NewStatusMessage(fmt.Sprintf("Error: %v", err)))
 	}
 
-	r.config.TemplateString = newTemplate
+	m.config.TemplateString = newTemplate
 
-	for i, item := range r.list.Items() {
+	for i, item := range m.list.Items() {
 		current, ok := item.(repository.Item)
 		if !ok {
 			continue
@@ -102,31 +102,31 @@ func (r *Model) handleEditTemplate() []tea.Cmd {
 
 		newItem := repository.Item{R: current.R, Preview: template.Preview(current.R, newTemplate)}
 		// SetItems doubles the amount of items in the List
-		cmds = append(cmds, r.list.SetItem(i, newItem))
+		cmds = append(cmds, m.list.SetItem(i, newItem))
 	}
 
 	return cmds
 }
 
-func (r *Model) SetSize(width, height int) {
-	r.config.Width, r.config.Height = width, height
+func (m *Model) SetSize(width, height int) {
+	m.config.Width, m.config.Height = width, height
 
 	// Status bars take up full width of screen
-	r.progress.Width = width
-	r.list.Help.Width = width
+	m.progress.Width = width
+	m.list.Help.Width = width
 
-	statusHeight := lipgloss.Height(r.statusView())
+	statusHeight := lipgloss.Height(m.statusView())
 	listWidth := max(width, minTerminalWidth)
-	r.list.SetSize(listWidth, height-statusHeight-1)
+	m.list.SetSize(listWidth, height-statusHeight-1)
 
-	previewTitleHeight := lipgloss.Height(r.previewTitleView())
-	r.preview.Height = height - statusHeight - previewTitleHeight - 1 // Subtract one for newline between previewTitle and preview
+	previewTitleHeight := lipgloss.Height(m.previewTitleView())
+	m.preview.Height = height - statusHeight - previewTitleHeight - 1 // Subtract one for newline between previewTitle and preview
 }
 
-func (r Model) countSelected() int {
+func (m Model) countSelected() int {
 	var selected int
 
-	items := r.list.Items()
+	items := m.list.Items()
 	for _, item := range items {
 		current, ok := item.(repository.Item)
 		if !ok {
@@ -143,93 +143,93 @@ func (r Model) countSelected() int {
 	return selected
 }
 
-func (r Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	cmds := r.updateSubmodels(msg)
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	cmds := m.updateSubmodels(msg)
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		r.SetSize(msg.Width, msg.Height)
+		m.SetSize(msg.Width, msg.Height)
 	case progress.FrameMsg:
-		progressModel, cmd := r.progress.Update(msg)
-		r.progress = progressModel.(progress.Model)
+		progressModel, cmd := m.progress.Update(msg)
+		m.progress = progressModel.(progress.Model)
 		cmds = append(cmds, cmd)
 	case repository.RefreshPreviewCmd:
-		r.updatePreview()
+		m.updatePreview()
 	case repository.Item:
-		r.repos++
+		m.repos++
 
-		index := len(r.list.Items()) - 1
-		percent := float64(r.repos) / float64(msg.R.Total)
-		cmds = append(cmds, awaitCmd(r.channel, r.config.TemplateString), r.progress.SetPercent(percent), r.list.InsertItem(index, msg))
+		index := len(m.list.Items()) - 1
+		percent := float64(m.repos) / float64(msg.R.Total)
+		cmds = append(cmds, awaitCmd(m.channel, m.config.TemplateString), m.progress.SetPercent(percent), m.list.InsertItem(index, msg))
 
 		// Loaded first repository, update the preview
-		if r.repos == 1 {
+		if m.repos == 1 {
 			cmds = append(cmds, repository.RefreshPreview)
 		}
 	case tea.KeyMsg:
-		if r.list.FilterState() == list.Filtering {
+		if m.list.FilterState() == list.Filtering {
 			break
 		}
 
 		switch {
-		case key.Matches(msg, r.keys.More):
+		case key.Matches(msg, m.keys.More):
 			// Force reset size
-			r.SetSize(r.config.Width, r.config.Height)
-		case key.Matches(msg, r.keys.Template):
-			r.handleEditTemplate()
+			m.SetSize(m.config.Width, m.config.Height)
+		case key.Matches(msg, m.keys.Template):
+			m.handleEditTemplate()
 			cmds = append(cmds, repository.RefreshPreview)
-		case key.Matches(msg, r.keys.Publish):
-			if r.countSelected() == 0 {
+		case key.Matches(msg, m.keys.Publish):
+			if m.countSelected() == 0 {
 				break
 			}
 
-			r.handlePublish()
-			return r, tea.Quit
+			m.handlePublish()
+			return m, tea.Quit
 		}
 	}
 
-	switch r.countSelected() {
+	switch m.countSelected() {
 	case 0:
-		r.keys.Publish.SetEnabled(false)
+		m.keys.Publish.SetEnabled(false)
 	default:
-		r.keys.Publish.SetEnabled(true)
+		m.keys.Publish.SetEnabled(true)
 	}
 
-	return r, tea.Batch(cmds...)
+	return m, tea.Batch(cmds...)
 }
 
-func (r *Model) updateSubmodels(msg tea.Msg) []tea.Cmd {
+func (m *Model) updateSubmodels(msg tea.Msg) []tea.Cmd {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
-	currentIndex := r.list.Index()
+	currentIndex := m.list.Index()
 
-	r.list, cmd = r.list.Update(msg)
+	m.list, cmd = m.list.Update(msg)
 	cmds = append(cmds, cmd)
 
-	newIndex := r.list.Index()
+	newIndex := m.list.Index()
 
 	// Only update preview if the current index has changed
 	if currentIndex != newIndex {
-		r.updatePreview()
+		m.updatePreview()
 	}
 
 	// Only handle mouse events
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
-		r.preview, cmd = r.preview.Update(msg)
+		m.preview, cmd = m.preview.Update(msg)
 		cmds = append(cmds, cmd)
 	}
 
 	return cmds
 }
 
-func (r *Model) handlePublish() {
-	ctx, cancel := context.WithTimeout(context.Background(), r.config.Timeout)
+func (m *Model) handlePublish() {
+	ctx, cancel := context.WithTimeout(context.Background(), m.config.Timeout)
 	defer cancel()
 
 	var releases []*service.RepositoryRelease
-	for _, item := range r.list.Items() {
+	for _, item := range m.list.Items() {
 		i, ok := item.(repository.Item)
 		if !ok || !i.Selected {
 			continue
@@ -238,31 +238,31 @@ func (r *Model) handlePublish() {
 		releases = append(releases, &service.RepositoryRelease{Name: i.R.Repo.GetName(), Version: "1.0.0", Body: i.Preview})
 	}
 
-	r.config.Releases <- r.gh.CreateReleases(ctx, r.config.Org, releases)
+	m.config.Releases <- m.gh.CreateReleases(ctx, m.config.Org, releases)
 }
 
-func (r Model) statusView() string {
-	helpView := r.list.Styles.HelpStyle.Render(r.list.Help.View(r.list))
-	return lipgloss.JoinVertical(lipgloss.Left, helpView, r.progress.View())
+func (m Model) statusView() string {
+	helpView := m.list.Styles.HelpStyle.Render(m.list.Help.View(m.list))
+	return lipgloss.JoinVertical(lipgloss.Left, helpView, m.progress.View())
 }
 
-func (r Model) previewTitleView() string {
+func (m Model) previewTitleView() string {
 	return viewportTitleStyle.Render(previewTitle)
 }
 
-func (r Model) previewView() string {
-	preview := lipgloss.NewStyle().MarginTop(1).Width(r.preview.Width).Render(r.preview.View())
+func (m Model) previewView() string {
+	preview := lipgloss.NewStyle().MarginTop(1).Width(m.preview.Width).Render(m.preview.View())
 
-	return viewportStyle.Render(lipgloss.JoinVertical(lipgloss.Left, r.previewTitleView(), preview))
+	return viewportStyle.Render(lipgloss.JoinVertical(lipgloss.Left, m.previewTitleView(), preview))
 }
 
-func (r Model) View() string {
-	if r.config.Width < minTerminalWidth {
+func (m Model) View() string {
+	if m.config.Width < minTerminalWidth {
 		return increaseTerminalWidthMsg
 	}
 
-	top := lipgloss.JoinHorizontal(lipgloss.Left, listStyle.Render(r.list.View()), r.previewView())
-	return lipgloss.JoinVertical(lipgloss.Left, top, r.statusView())
+	top := lipgloss.JoinHorizontal(lipgloss.Left, listStyle.Render(m.list.View()), m.previewView())
+	return lipgloss.JoinVertical(lipgloss.Left, top, m.statusView())
 }
 
 func fetch(config *config.Config, gh *service.GitHub, org string) <-chan *service.ReleaseableRepoResponse {
