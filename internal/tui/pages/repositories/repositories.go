@@ -47,10 +47,23 @@ func New(gh *service.GitHub, config *config.Config) *Model {
 	list.SetShowHelp(false)
 	list.Styles.Title = listTitleStyle
 	list.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{delegate.Keys.Selection, keys.Template, delegate.Keys.Edit, keys.Publish}
+		return []key.Binding{
+			delegate.Keys.Selection,
+			keys.Template,
+			delegate.Keys.Edit,
+			keys.Publish,
+			keys.Refresh,
+		}
 	}
+
 	list.AdditionalShortHelpKeys = func() []key.Binding {
-		return []key.Binding{delegate.Keys.Selection, keys.Template, delegate.Keys.Edit, keys.Publish}
+		return []key.Binding{
+			delegate.Keys.Selection,
+			keys.Template,
+			delegate.Keys.Edit,
+			keys.Publish,
+			keys.Refresh,
+		}
 	}
 
 	m := &Model{
@@ -185,6 +198,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			m.handlePublish()
 			return m, tea.Quit
+		case key.Matches(msg, m.keys.Refresh):
+			m.repos = 0
+			m.channel = fetch(m.config, m.gh, m.config.Org)
+			cmds = append(cmds, m.progress.SetPercent(0), m.list.SetItems([]list.Item{}), m.Init())
 		}
 	}
 
