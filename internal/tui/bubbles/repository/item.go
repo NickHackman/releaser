@@ -22,16 +22,16 @@ type Item struct {
 	Branch                           string
 }
 
-func (oi Item) FilterValue() string {
-	return oi.Repo.GetName()
+func (i Item) FilterValue() string {
+	return i.Repo.GetName()
 }
 
-func (oi Item) Select() Item {
+func (i Item) Select() Item {
 	return Item{
-		ReleaseableRepoResponse: oi.ReleaseableRepoResponse,
-		Preview:                 oi.Preview,
-		Branch:                  oi.Branch,
-		Selected:                !oi.Selected,
+		ReleaseableRepoResponse: i.ReleaseableRepoResponse,
+		Preview:                 i.Preview,
+		Branch:                  i.Branch,
+		Selected:                !i.Selected,
 	}
 }
 

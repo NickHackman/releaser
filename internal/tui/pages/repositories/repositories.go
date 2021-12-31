@@ -25,8 +25,6 @@ import (
 const (
 	minTerminalWidth         = 150
 	increaseTerminalWidthMsg = "Increase width of terminal to display content."
-	loadingMsg               = "Loading..."
-	previewTitle             = "Preview"
 )
 
 type Model struct {

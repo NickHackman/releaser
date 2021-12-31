@@ -23,7 +23,7 @@ type Model struct {
 
 func New() Model {
 	viewport := viewport.Model{}
-	viewport.SetContent("Loading...")
+	viewport.SetContent(loadingMessage)
 
 	return Model{
 		viewport: viewport,
