@@ -12,4 +12,5 @@ type Config struct {
 	Org            string
 	Width, Height  int
 	Releases       chan<- []*service.RepositoryReleaseResponse
+	TemplateInstructions string
 }

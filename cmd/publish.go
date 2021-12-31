@@ -22,6 +22,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	_ "embed"
 	"time"
 
 	"github.com/NickHackman/tagger/internal/service"
@@ -31,42 +32,14 @@ import (
 	"github.com/spf13/viper"
 )
 
+//go:embed template-instructions.txt
+var templateInstructions string
+
 // publishCmd represents the publish command
 var publishCmd = &cobra.Command{
 	Use:   "publish",
 	Short: "Publish tags/releases to repositories in a GitHub organization",
-	Long: `Publish tags/releases to repositories in a GitHub organization
-
-Template Variables:
-
-Top Level Variables:
-{{ .RepositoryName }}                  hello-world	
-{{ .RepositoryOwner }}                 octocat
-{{ .RepositoryURL }}                   https://github.com/octocat/hello-world	
-{{ .RepositoryDescription }}           Example description
-{{ .RepositoryDefaultBranch }}         main
-{{ .Commits }}                         List of commits
-
-Commit:
-{{ .Sha }}                             Unique identifier for commit
-{{ .URL }}                             URL to commit
-{{ .Summary }}                         First line of the commit message
-{{ .Message }}                         Full commit message (includes newlines)
-
-Author/Committer:
-{{ .AuthorUsername }}                  octocat (GitHub Username)
-{{ .AuthorName }}                      octocat (Commit Name)
-{{ .AuthorEmail }}                     octocat@github.com
-{{ .AuthorDate }} 
-{{ .AuthorURL }}                       https://github.com/octocat
-
-Templates also include Sprig functions: https://masterminds.github.io/sprig/strings.html
-
-Example:
-
-{{ range .Commits }}
-{{ substr 0 8 .Sha }} committed by {{ .CommitterUsername }} and authored by {{ .AuthorUsername }} {{ .Summary }}
-{{ end }}`,
+	Long:  "Publish tags/releases to repositories in a GitHub organization\n\n" + templateInstructions,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		token := viper.GetString("token")
 		url := viper.GetString("url")
@@ -80,6 +53,7 @@ Example:
 			Org:            viper.GetString("org"),
 			Timeout:        viper.GetDuration("timeout"),
 			TemplateString: viper.GetString("template"),
+			TemplateInstructions: templateInstructions,
 		}
 
 		return tui.Execute(gh, config)

@@ -1,2 +1,0 @@
-# Comments are lines prefixed by '#'
-# Quit the file without saving to not modify the tag body.
