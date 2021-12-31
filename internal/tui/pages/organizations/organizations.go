@@ -92,7 +92,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.orgs++
 
 		index := len(m.list.Items()) - 1
-		percent := float64(m.orgs) / float64(msg.R.Total)
+		percent := float64(m.orgs) / float64(msg.Total)
 		cmds = append(cmds, awaitCmd(m.channel), m.progress.SetPercent(percent), m.list.InsertItem(index, msg))
 	case progress.FrameMsg:
 		progressModel, cmd := m.progress.Update(msg)
@@ -114,7 +114,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			browser.Stdout = &output
 
 			var statusMsg string
-			if err := browser.OpenURL(organization.R.Org.GetHTMLURL()); err != nil {
+			if err := browser.OpenURL(organization.Org.GetHTMLURL()); err != nil {
 				statusMsg = "Error: " + err.Error()
 			} else {
 				statusMsg = output.String()
@@ -127,7 +127,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 
-			m.config.Org = organization.R.Org.GetLogin()
+			m.config.Org = organization.Org.GetLogin()
 
 			repositories := repositories.New(m.gh, m.config)
 			return repositories, repositories.Init()
@@ -155,6 +155,6 @@ func awaitCmd(channel <-chan *service.OrgResponse) tea.Cmd {
 			return nil
 		}
 
-		return organization.Item{R: org}
+		return organization.Item{OrgResponse: org}
 	}
 }

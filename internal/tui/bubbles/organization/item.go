@@ -5,9 +5,9 @@ import (
 )
 
 type Item struct {
-	R *service.OrgResponse
+	*service.OrgResponse
 }
 
-func (oi Item) FilterValue() string {
-	return oi.R.Org.GetLogin()
+func (i Item) FilterValue() string {
+	return i.Org.GetLogin()
 }

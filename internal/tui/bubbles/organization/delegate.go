@@ -24,12 +24,12 @@ func (d Delegate) Update(msg tea.Msg, m *list.Model) tea.Cmd {
 }
 
 func (d Delegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	oi, ok := listItem.(Item)
+	i, ok := listItem.(Item)
 	if !ok {
 		return
 	}
 
-	org := oi.R.Org
+	org := i.Org
 
 	var output strings.Builder
 	output.WriteString(titleStyle.Render(org.GetLogin()))
