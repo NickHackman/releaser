@@ -1,25 +1,18 @@
 package edit
 
 import (
-	"bufio"
-	_ "embed"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (
 	defaultEditor = "vim"
-)
 
-var (
-	//go:embed template-instructions.txt
-	TemplateInstructions string
-
-	//go:embed manual-edit-instructions.txt
-	ManualEditInstructions string
+	errMsg = "The Error that occurred on previous edit"
 )
 
 func runEditor(fileName string) error {
@@ -43,14 +36,14 @@ func runEditor(fileName string) error {
 	return cmd.Run()
 }
 
-func createTempFile(content string) (string, error) {
+func createTempFile(content []byte) (string, error) {
 	tempDir := os.TempDir()
-	f, err := ioutil.TempFile(tempDir, "*")
+	f, err := ioutil.TempFile(tempDir, "tagger-*.yml")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp file: %v", err)
 	}
 
-	if _, err := f.WriteString(content); err != nil {
+	if _, err := f.Write(content); err != nil {
 		return "", fmt.Errorf("failed to write content to temp file %s: %v", f.Name(), err)
 	}
 
@@ -61,44 +54,37 @@ func createTempFile(content string) (string, error) {
 	return f.Name(), nil
 }
 
-func Content(content, instructions string) (string, error) {
-	fileContent := content + "\n\n" + instructions
-	fileName, err := createTempFile(fileContent)
+func Invoke(content *map[string]interface{}, result interface{}) error {
+	out, err := yaml.Marshal(content)
 	if err != nil {
-		return "", err
+		return fmt.Errorf("failed to marshal %#v: %v", content, err)
+	}
+
+	fileName, err := createTempFile(out)
+	if err != nil {
+		return err
 	}
 
 	if err := runEditor(fileName); err != nil {
-		return "", fmt.Errorf("failed to run editor on file %s: %v", fileName, err)
+		return fmt.Errorf("failed to run editor on file %s: %v", fileName, err)
 	}
 
-	editedContentBytes, err := ioutil.ReadFile(fileName)
+	changed, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		return "", fmt.Errorf("failed to read file %s: %v", fileName, err)
+		return fmt.Errorf("failed to read file %s: %v", fileName, err)
 	}
 
 	if err := os.Remove(fileName); err != nil {
-		return "", fmt.Errorf("failed to remove temp file %s: %v", fileName, err)
+		return fmt.Errorf("failed to remove temp file %s: %v", fileName, err)
 	}
 
-	editedContent := ignoreComments(string(editedContentBytes))
-	return editedContent, nil
-}
+	if err := yaml.Unmarshal(changed, result); err != nil {
+		// display error to user on next invoke
+		(*content)["error"] = &yaml.Node{Value: err.Error(), Kind: yaml.ScalarNode, HeadComment: errMsg}
 
-func ignoreComments(content string) string {
-	var builder strings.Builder
-	scanner := bufio.NewScanner(strings.NewReader(content))
-
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		if strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		builder.WriteString(line)
-		builder.WriteString("\n")
+		// failed to unmarshal, retry
+		return Invoke(content, result)
 	}
 
-	return strings.TrimSpace(builder.String())
+	return nil
 }
