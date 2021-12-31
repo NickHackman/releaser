@@ -1,6 +1,7 @@
 package organizations
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/NickHackman/tagger/internal/service"
@@ -13,6 +14,7 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/cli/browser"
 )
 
 const (
@@ -38,10 +40,10 @@ func New(gh *service.GitHub, config *config.Config) *Model {
 	list.Title = listTitle
 	list.Styles.Title = orgListTitleStyle
 	list.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{listKeys.Selection, listKeys.Refresh}
+		return []key.Binding{listKeys.Selection, listKeys.Refresh, listKeys.Open}
 	}
 	list.AdditionalShortHelpKeys = func() []key.Binding {
-		return []key.Binding{listKeys.Selection, listKeys.Refresh}
+		return []key.Binding{listKeys.Selection, listKeys.Refresh, listKeys.Open}
 	}
 
 	progress := progress.NewModel(progress.WithoutPercentage(), progress.WithGradient(colors.ProgressStart, colors.ProgressEnd))
@@ -102,6 +104,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch {
+		case key.Matches(msg, m.keys.Open):
+			organization, ok := m.list.SelectedItem().(organization.Item)
+			if !ok {
+				break
+			}
+
+			var output bytes.Buffer
+			browser.Stdout = &output
+
+			var statusMsg string
+			if err := browser.OpenURL(organization.R.Org.GetHTMLURL()); err != nil {
+				statusMsg = "Error: " + err.Error()
+			} else {
+				statusMsg = output.String()
+			}
+
+			cmds = append(cmds, m.list.NewStatusMessage(statusMsg))
 		case key.Matches(msg, m.keys.Selection):
 			organization, ok := m.list.SelectedItem().(organization.Item)
 			if !ok {
