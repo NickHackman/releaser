@@ -169,7 +169,7 @@ func (gh *GitHub) branches(ctx context.Context, owner, repo string) ([]*github.B
 	var branches []*github.Branch
 
 	for {
-		options := &github.BranchListOptions{ListOptions: github.ListOptions{PerPage: githubMaxPerPage, Page: 1}}
+		options := &github.BranchListOptions{ListOptions: github.ListOptions{PerPage: githubMaxPerPage, Page: next}}
 		branchesList, r, err := gh.client.Repositories.ListBranches(ctx, owner, repo, options)
 		if err != nil {
 			return nil, err
