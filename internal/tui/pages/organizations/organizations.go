@@ -22,7 +22,7 @@ const (
 type Model struct {
 	list     list.Model
 	progress progress.Model
-	keys     *organizationsListKeyMap
+	keys     *keyMap
 
 	gh      *service.GitHub
 	channel <-chan *service.OrgResponse
@@ -38,13 +38,10 @@ func New(gh *service.GitHub, config *config.Config) *Model {
 	list.Title = listTitle
 	list.Styles.Title = orgListTitleStyle
 	list.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			listKeys.selectionFull,
-			listKeys.refreshFull,
-		}
+		return []key.Binding{listKeys.Selection, listKeys.Refresh}
 	}
 	list.AdditionalShortHelpKeys = func() []key.Binding {
-		return []key.Binding{listKeys.selection, listKeys.refresh}
+		return []key.Binding{listKeys.Selection, listKeys.Refresh}
 	}
 
 	progress := progress.NewModel(progress.WithoutPercentage(), progress.WithGradient(colors.ProgressStart, colors.ProgressEnd))
@@ -105,7 +102,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch {
-		case key.Matches(msg, m.keys.selection):
+		case key.Matches(msg, m.keys.Selection):
 			organization, ok := m.list.SelectedItem().(organization.Item)
 			if !ok {
 				return m, nil
@@ -115,7 +112,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			repositories := repositories.New(m.gh, m.config)
 			return repositories, repositories.Init()
-		case key.Matches(msg, m.keys.refresh):
+		case key.Matches(msg, m.keys.Refresh):
 			m.orgs = 0
 			m.channel = fetch(m.config, m.gh)
 			cmds = append(cmds, m.progress.SetPercent(0), m.list.SetItems([]list.Item{}), m.Init())
