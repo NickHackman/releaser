@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
@@ -8,15 +9,17 @@ import (
 	"github.com/NickHackman/tagger/internal/edit"
 	"github.com/NickHackman/tagger/internal/service"
 	"github.com/NickHackman/tagger/internal/template"
+	"github.com/NickHackman/tagger/internal/tui/bubbles/preview"
 	"github.com/NickHackman/tagger/internal/tui/bubbles/repository"
 	"github.com/NickHackman/tagger/internal/tui/colors"
 	"github.com/NickHackman/tagger/internal/tui/config"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/progress"
-	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/cli/browser"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -29,7 +32,7 @@ const (
 type Model struct {
 	list     list.Model
 	progress progress.Model
-	preview  viewport.Model
+	preview  preview.Model
 	keys     *keyMap
 
 	gh      *service.GitHub
@@ -40,7 +43,7 @@ type Model struct {
 
 func New(gh *service.GitHub, config *config.Config) *Model {
 	keys := newKeyMap()
-	delegate := repository.NewDelegate()
+	delegate := repository.NewDelegate(gh, config)
 
 	list := list.NewModel([]list.Item{}, delegate, 0, 0)
 	list.Title = fmt.Sprintf("%s Repositories", strings.Title(config.Org))
@@ -50,6 +53,7 @@ func New(gh *service.GitHub, config *config.Config) *Model {
 		return []key.Binding{
 			delegate.Keys.Selection,
 			keys.Template,
+			keys.Open,
 			delegate.Keys.Edit,
 			keys.Publish,
 			keys.Refresh,
@@ -60,6 +64,7 @@ func New(gh *service.GitHub, config *config.Config) *Model {
 		return []key.Binding{
 			delegate.Keys.Selection,
 			keys.Template,
+			keys.Open,
 			delegate.Keys.Edit,
 			keys.Publish,
 			keys.Refresh,
@@ -69,14 +74,13 @@ func New(gh *service.GitHub, config *config.Config) *Model {
 	m := &Model{
 		list:     list,
 		progress: progress.NewModel(progress.WithoutPercentage(), progress.WithGradient(colors.ProgressStart, colors.ProgressEnd)),
-		preview:  viewport.Model{},
+		preview:  preview.New(),
 		keys:     keys,
 		gh:       gh,
 		channel:  fetch(config, gh, config.Org),
 		config:   config,
 	}
 
-	m.preview.SetContent(loadingMsg)
 	m.SetSize(config.Width, config.Height)
 	return m
 }
@@ -92,7 +96,7 @@ func (m *Model) updatePreview() {
 		return
 	}
 
-	m.preview.SetContent(current.Preview)
+	m.preview.SetContent(current.Preview, current.Branch)
 }
 
 // handleEditTemplate opens the user's $EDITOR (or if none vim) and after they save/quit
@@ -100,12 +104,27 @@ func (m *Model) updatePreview() {
 func (m *Model) handleEditTemplate() []tea.Cmd {
 	var cmds []tea.Cmd
 
-	newTemplate, err := edit.Content(m.config.TemplateString, edit.TemplateInstructions)
-	if err != nil {
+	yamlRepresentation := map[string]interface{}{
+		"template": &yaml.Node{
+			Value:       m.config.TemplateString,
+			Kind:        yaml.ScalarNode,
+			HeadComment: m.config.TemplateInstructions,
+		},
+	}
+
+	var result *struct {
+		Template string
+	}
+
+	if err := edit.Invoke(&yamlRepresentation, &result); err != nil {
 		return append(cmds, m.list.NewStatusMessage(fmt.Sprintf("Error: %v", err)))
 	}
 
-	m.config.TemplateString = newTemplate
+	if m.config.TemplateString == result.Template {
+		return cmds
+	}
+
+	m.config.TemplateString = result.Template
 
 	for i, item := range m.list.Items() {
 		current, ok := item.(repository.Item)
@@ -113,7 +132,12 @@ func (m *Model) handleEditTemplate() []tea.Cmd {
 			continue
 		}
 
-		newItem := repository.Item{R: current.R, Preview: template.Preview(current.R, newTemplate)}
+		newItem := repository.Item{
+			ReleaseableRepoResponse: current.ReleaseableRepoResponse,
+			Preview:                 template.Preview(current.ReleaseableRepoResponse, result.Template),
+			Branch:                  current.Branch,
+		}
+
 		// SetItems doubles the amount of items in the List
 		cmds = append(cmds, m.list.SetItem(i, newItem))
 	}
@@ -131,9 +155,7 @@ func (m *Model) SetSize(width, height int) {
 	statusHeight := lipgloss.Height(m.statusView())
 	listWidth := max(width, minTerminalWidth)
 	m.list.SetSize(listWidth, height-statusHeight-1)
-
-	previewTitleHeight := lipgloss.Height(m.previewTitleView())
-	m.preview.Height = height - statusHeight - previewTitleHeight - 1 // Subtract one for newline between previewTitle and preview
+	m.preview.SetSize(width, height-statusHeight-1)
 }
 
 func (m Model) countSelected() int {
@@ -172,13 +194,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.repos++
 
 		index := len(m.list.Items()) - 1
-		percent := float64(m.repos) / float64(msg.R.Total)
-		cmds = append(cmds, awaitCmd(m.channel, m.config.TemplateString), m.progress.SetPercent(percent), m.list.InsertItem(index, msg))
-
-		// Loaded first repository, update the preview
-		if m.repos == 1 {
-			cmds = append(cmds, repository.RefreshPreview)
-		}
+		percent := float64(m.repos) / float64(msg.Total)
+		cmds = append(cmds,
+			awaitCmd(m.channel, m.config.TemplateString),
+			m.progress.SetPercent(percent),
+			m.list.InsertItem(index, msg),
+			// Refresh preview every time, since the current item may change
+			repository.RefreshPreview,
+		)
 	case tea.KeyMsg:
 		if m.list.FilterState() == list.Filtering {
 			break
@@ -188,6 +211,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.More):
 			// Force reset size
 			m.SetSize(m.config.Width, m.config.Height)
+		case key.Matches(msg, m.keys.Open):
+			item, ok := m.list.SelectedItem().(repository.Item)
+			if !ok {
+				break
+			}
+
+			var output bytes.Buffer
+			browser.Stdout = &output
+
+			var statusMsg string
+			if err := browser.OpenURL(item.Repo.GetHTMLURL()); err != nil {
+				statusMsg = "Error: " + err.Error()
+			} else {
+				statusMsg = output.String()
+			}
+
+			cmds = append(cmds, m.list.NewStatusMessage(statusMsg))
 		case key.Matches(msg, m.keys.Template):
 			m.handleEditTemplate()
 			cmds = append(cmds, repository.RefreshPreview)
@@ -231,12 +271,11 @@ func (m *Model) updateSubmodels(msg tea.Msg) []tea.Cmd {
 		m.updatePreview()
 	}
 
-	// Only handle mouse events
-	switch msg := msg.(type) {
-	case tea.MouseMsg:
-		m.preview, cmd = m.preview.Update(msg)
-		cmds = append(cmds, cmd)
-	}
+	var previewModel tea.Model
+	previewModel, cmd = m.preview.Update(msg)
+	m.preview = previewModel.(preview.Model)
+
+	cmds = append(cmds, cmd)
 
 	return cmds
 }
@@ -252,7 +291,7 @@ func (m *Model) handlePublish() {
 			continue
 		}
 
-		releases = append(releases, &service.RepositoryRelease{Name: i.R.Repo.GetName(), Version: "1.0.0", Body: i.Preview})
+		releases = append(releases, &service.RepositoryRelease{Name: i.Repo.GetName(), Version: "1.0.0", Body: i.Preview})
 	}
 
 	m.config.Releases <- m.gh.CreateReleases(ctx, m.config.Org, releases)
@@ -263,28 +302,18 @@ func (m Model) statusView() string {
 	return lipgloss.JoinVertical(lipgloss.Left, helpView, m.progress.View())
 }
 
-func (m Model) previewTitleView() string {
-	return viewportTitleStyle.Render(previewTitle)
-}
-
-func (m Model) previewView() string {
-	preview := lipgloss.NewStyle().MarginTop(1).Width(m.preview.Width).Render(m.preview.View())
-
-	return viewportStyle.Render(lipgloss.JoinVertical(lipgloss.Left, m.previewTitleView(), preview))
-}
-
 func (m Model) View() string {
 	if m.config.Width < minTerminalWidth {
 		return increaseTerminalWidthMsg
 	}
 
-	top := lipgloss.JoinHorizontal(lipgloss.Left, listStyle.Render(m.list.View()), m.previewView())
+	top := lipgloss.JoinHorizontal(lipgloss.Left, listStyle.Render(m.list.View()), m.preview.View())
 	return lipgloss.JoinVertical(lipgloss.Left, top, m.statusView())
 }
 
 func fetch(config *config.Config, gh *service.GitHub, org string) <-chan *service.ReleaseableRepoResponse {
 	ctx, cancel := context.WithTimeout(context.Background(), config.Timeout)
-	channel, callback := gh.ReleasableReposByOrg(ctx, org)
+	channel, callback := gh.ReleasableReposByOrg(ctx, org, config.Branch)
 
 	go func() {
 		defer cancel()
@@ -304,7 +333,11 @@ func awaitCmd(channel <-chan *service.ReleaseableRepoResponse, templateString st
 			return nil
 		}
 
-		return repository.Item{R: r, Preview: template.Preview(r, templateString)}
+		return repository.Item{
+			ReleaseableRepoResponse: r,
+			Preview:                 template.Preview(r, templateString),
+			Branch:                  r.Branch,
+		}
 	}
 }
 

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync"
 	"sync/atomic"
 
@@ -93,33 +94,14 @@ func (gh *GitHub) createRelease(ctx context.Context, owner, repo, version, body 
 	return releaseResponse, nil
 }
 
-func (gh *GitHub) latestTag(ctx context.Context, owner, repo string) (*github.RepositoryTag, error) {
-	options := &github.ListOptions{Page: 1, PerPage: 1}
-
-	tags, r, err := gh.client.Repositories.ListTags(ctx, owner, repo, options)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := github.CheckResponse(r.Response); err != nil {
-		return nil, err
-	}
-
-	if len(tags) == 0 {
-		return nil, nil
-	}
-
-	return tags[0], nil
-}
-
-func (gh *GitHub) commitsSince(ctx context.Context, owner, repo string, sha string) ([]*github.RepositoryCommit, error) {
+func (gh *GitHub) tags(ctx context.Context, owner, repo string) ([]*github.RepositoryTag, error) {
 	next := 1
 
-	var commitsSince []*github.RepositoryCommit
+	var tags []*github.RepositoryTag
 	for {
-		options := &github.CommitsListOptions{ListOptions: github.ListOptions{PerPage: githubMaxPerPage, Page: next}}
+		options := &github.ListOptions{Page: next, PerPage: githubMaxPerPage}
 
-		commits, r, err := gh.client.Repositories.ListCommits(ctx, owner, repo, options)
+		responseTags, r, err := gh.client.Repositories.ListTags(ctx, owner, repo, options)
 		if err != nil {
 			return nil, err
 		}
@@ -128,9 +110,45 @@ func (gh *GitHub) commitsSince(ctx context.Context, owner, repo string, sha stri
 			return nil, err
 		}
 
+		tags = append(tags, responseTags...)
+
+		next = r.NextPage
+		if next == 0 {
+			break
+		}
+	}
+
+	return tags, nil
+}
+
+// mostRecentTagAndChanges get the most recent commits and determine most recent tag for a branch, if branch is not provided the default branch will be used.
+func (gh *GitHub) mostRecentTagAndChanges(ctx context.Context, owner, repo string, tags []*github.RepositoryTag, branch string) (string, *github.RepositoryTag, []*github.RepositoryCommit, error) {
+	next := 1
+
+	var commitsSince []*github.RepositoryCommit
+	for {
+		options := &github.CommitsListOptions{SHA: branch, ListOptions: github.ListOptions{PerPage: githubMaxPerPage, Page: next}}
+
+		commits, r, err := gh.client.Repositories.ListCommits(ctx, owner, repo, options)
+		if r.Response.StatusCode == http.StatusNotFound {
+			branch = ""
+			continue
+		}
+
+		if err != nil {
+			return "", nil, nil, err
+		}
+
+		if err := github.CheckResponse(r.Response); err != nil {
+			return "", nil, nil, err
+		}
+
 		for _, commit := range commits {
-			if commit.GetSHA() == sha {
-				return commitsSince, nil
+			for _, tag := range tags {
+				// find most recent tag associated to this branch
+				if commit.GetSHA() == tag.GetCommit().GetSHA() {
+					return branch, tag, commitsSince, nil
+				}
 			}
 
 			commitsSince = append(commitsSince, commit)
@@ -142,7 +160,34 @@ func (gh *GitHub) commitsSince(ctx context.Context, owner, repo string, sha stri
 		}
 	}
 
-	return commitsSince, nil
+	return branch, nil, commitsSince, nil
+}
+
+func (gh *GitHub) branches(ctx context.Context, owner, repo string) ([]*github.Branch, error) {
+	next := 1
+
+	var branches []*github.Branch
+
+	for {
+		options := &github.BranchListOptions{ListOptions: github.ListOptions{PerPage: githubMaxPerPage, Page: 1}}
+		branchesList, r, err := gh.client.Repositories.ListBranches(ctx, owner, repo, options)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := github.CheckResponse(r.Response); err != nil {
+			return nil, err
+		}
+
+		branches = append(branches, branchesList...)
+
+		next = r.NextPage
+		if next == 0 {
+			break
+		}
+	}
+
+	return branches, nil
 }
 
 type ReleaseableRepoResponse struct {
@@ -152,9 +197,11 @@ type ReleaseableRepoResponse struct {
 	Commits   []*github.RepositoryCommit
 	Repo      *github.Repository
 	LatestTag *github.RepositoryTag
+	Branches  []*github.Branch
+	Branch    string
 }
 
-func (gh *GitHub) releaseableRepo(ctx context.Context, org string, repo *github.Repository) (*ReleaseableRepoResponse, error) {
+func (gh *GitHub) ReleaseableRepo(ctx context.Context, org string, repo *github.Repository, branch string) (*ReleaseableRepoResponse, error) {
 	if repo.GetIsTemplate() {
 		return nil, nil
 	}
@@ -163,33 +210,41 @@ func (gh *GitHub) releaseableRepo(ctx context.Context, org string, repo *github.
 		return nil, nil
 	}
 
-	tag, err := gh.latestTag(ctx, org, repo.GetName())
+	if repo.GetDefaultBranch() == "" {
+		return nil, nil
+	}
+
+	tags, err := gh.tags(ctx, org, repo.GetName())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest tag for %s/%s: %v", org, repo.GetName(), err)
 	}
 
-	var commitsSince string
-	if tag != nil {
-		commitsSince = tag.GetCommit().GetSHA()
-	}
-
-	commits, err := gh.commitsSince(ctx, org, repo.GetName(), commitsSince)
+	branch, tag, commits, err := gh.mostRecentTagAndChanges(ctx, org, repo.GetName(), tags, branch)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get commits since %s for %s/%s: %v", commitsSince, org, repo.GetName(), err)
+		return nil, fmt.Errorf("failed to get commits on branch %s for %s/%s: %v", branch, org, repo.GetName(), err)
 	}
 
 	if len(commits) == 0 {
 		return nil, nil
 	}
 
-	return &ReleaseableRepoResponse{Commits: commits, LatestTag: tag, Repo: repo}, nil
+	branches, err := gh.branches(ctx, org, repo.GetName())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get branches for %s/%s: %v", org, repo.GetName(), err)
+	}
+
+	if branch == "" {
+		branch = repo.GetDefaultBranch()
+	}
+
+	return &ReleaseableRepoResponse{Commits: commits, LatestTag: tag, Repo: repo, Branches: branches, Branch: branch}, nil
 }
 
 // ReleaseableReposByOrg async retrival of GitHub repositories for an organization. Returns a channel to listen to for ReleasableRepos
 // and the function to run as a goroutine to acquire them.
 //
 // Filters out: archived, templates, repositories with 0 new commits since last Tag
-func (gh *GitHub) ReleasableReposByOrg(ctx context.Context, org string) (<-chan *ReleaseableRepoResponse, func() error) {
+func (gh *GitHub) ReleasableReposByOrg(ctx context.Context, org, branch string) (<-chan *ReleaseableRepoResponse, func() error) {
 	c := make(chan *ReleaseableRepoResponse)
 	next := 1
 	var total int32
@@ -221,7 +276,7 @@ func (gh *GitHub) ReleasableReposByOrg(ctx context.Context, org string) (<-chan 
 				repo := repo
 
 				errGrp.Go(func() error {
-					releaseableRepo, err := gh.releaseableRepo(ctx, org, repo)
+					releaseableRepo, err := gh.ReleaseableRepo(ctx, org, repo, branch)
 					if err != nil {
 						return err
 					}

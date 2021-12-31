@@ -1,6 +1,8 @@
 # GitHub API URL
 url: https://api.github.com/
 timeout: 1m0s
+# Defaults to the provided branch, or the default branch if not provided
+branch: main
 # URL used for authorization
 auth:
   url: https://github.com/

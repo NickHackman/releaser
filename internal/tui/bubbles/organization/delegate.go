@@ -33,12 +33,13 @@ func (d Delegate) Render(w io.Writer, m list.Model, index int, listItem list.Ite
 
 	var output strings.Builder
 	output.WriteString(titleStyle.Render(org.GetLogin()))
-	if org.GetDescription() != "" {
-		output.WriteString("\n" + descriptionStyle.Render(org.GetDescription()))
+
+	if description := org.GetDescription(); description != "" {
+		output.WriteString("\n" + descriptionStyle.Render(description))
 	}
 
-	if org.GetHTMLURL() != "" {
-		output.WriteString("\n" + urlStyle.Render(org.GetHTMLURL()))
+	if url := org.GetHTMLURL(); url != "" {
+		output.WriteString("\n" + urlStyle.Render(url))
 	}
 
 	render := unselectedStyle.Render

@@ -5,7 +5,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/NickHackman/tagger/internal/edit"
+	"github.com/NickHackman/tagger/internal/service"
+	"github.com/NickHackman/tagger/internal/tui/config"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -13,12 +14,16 @@ import (
 )
 
 type Delegate struct {
-	Keys *keyMap
+	Keys   *keyMap
+	gh     *service.GitHub
+	config *config.Config
 }
 
-func NewDelegate() Delegate {
+func NewDelegate(gh *service.GitHub, config *config.Config) Delegate {
 	return Delegate{
-		Keys: newKeyMap(),
+		Keys:   newKeyMap(),
+		gh:     gh,
+		config: config,
 	}
 }
 
@@ -37,30 +42,27 @@ func (d Delegate) Update(msg tea.Msg, m *list.Model) tea.Cmd {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, d.Keys.Edit):
-			currentItem := m.SelectedItem()
-			current, ok := currentItem.(Item)
+			current, ok := m.SelectedItem().(Item)
 			if !ok {
 				break
 			}
 
-			result, err := edit.Content(current.Preview, edit.ManualEditInstructions)
+			newItem, err := current.Edit(d.gh, d.config)
 			if err != nil {
-				cmds = append(cmds, m.NewStatusMessage(fmt.Sprintf("Error: %v", err)))
+				return m.NewStatusMessage(fmt.Sprintf("Error: %v", err))
 			}
 
-			currentIndex := m.Index()
-			newItem := Item{R: current.R, Preview: result}
-			cmds = append(cmds, m.SetItem(currentIndex, newItem), RefreshPreview)
+			index := m.Index()
+			cmds = append(cmds, m.SetItem(index, newItem), RefreshPreview)
 		case key.Matches(msg, d.Keys.Selection):
-			item := m.SelectedItem()
-
-			current, ok := item.(Item)
+			current, ok := m.SelectedItem().(Item)
 			if !ok {
 				break
 			}
 
 			index := m.Index()
-			cmds = append(cmds, m.SetItem(index, Item{R: current.R, Preview: current.Preview, Selected: !current.Selected}), RefreshPreview)
+			newItem := current.Select()
+			cmds = append(cmds, m.SetItem(index, newItem), RefreshPreview)
 		}
 	}
 
@@ -68,27 +70,25 @@ func (d Delegate) Update(msg tea.Msg, m *list.Model) tea.Cmd {
 }
 
 func (d Delegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	genericItem, ok := listItem.(Item)
+	item, ok := listItem.(Item)
 	if !ok {
 		return
 	}
 
-	item := genericItem.R.Repo
-
 	var output strings.Builder
-	output.WriteString(titleStyle.Render(item.GetName()))
+	output.WriteString(titleStyle.Render(item.Repo.GetName()))
 
-	if genericItem.Selected {
+	if item.Selected {
 		output.WriteString(checkmarkStyle.Render(" ✓"))
 	}
 
-	if item.GetDescription() != "" {
-		text := strings.Split(wordwrap.String(item.GetDescription(), 75), "\n")[0]
+	if description := item.Repo.GetDescription(); description != "" {
+		text := strings.Split(wordwrap.String(description, 75), "\n")[0]
 		output.WriteString("\n" + descriptionStyle.Render(text))
 	}
 
-	if item.GetHTMLURL() != "" {
-		output.WriteString("\n" + urlStyle.Render(item.GetHTMLURL()))
+	if url := item.Repo.GetHTMLURL(); url != "" {
+		output.WriteString("\n" + urlStyle.Render(url))
 	}
 
 	render := unselectedStyle.Render

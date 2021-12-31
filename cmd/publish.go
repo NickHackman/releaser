@@ -50,9 +50,10 @@ var publishCmd = &cobra.Command{
 		}
 
 		config := &config.Config{
-			Org:            viper.GetString("org"),
-			Timeout:        viper.GetDuration("timeout"),
-			TemplateString: viper.GetString("template"),
+			Branch:               viper.GetString("branch"),
+			Org:                  viper.GetString("org"),
+			Timeout:              viper.GetDuration("timeout"),
+			TemplateString:       viper.GetString("template"),
 			TemplateInstructions: templateInstructions,
 		}
 
@@ -66,8 +67,10 @@ func init() {
 	publishCmd.Flags().StringP("org", "o", "", "GitHub organization to create tags")
 	publishCmd.Flags().String("template", "", "Go template that is the default message for all tags/releases")
 	publishCmd.Flags().DurationP("timeout", "t", time.Minute, "Timeout duration to wait for GitHub to respond before exiting")
+	publishCmd.Flags().StringP("branch", "b", "", "Branch to create releases on (defaults to Repository's default branch)")
 
 	cobra.CheckErr(viper.BindPFlag("template", publishCmd.Flags().Lookup("template")))
 	cobra.CheckErr(viper.BindPFlag("org", publishCmd.Flags().Lookup("org")))
 	cobra.CheckErr(viper.BindPFlag("timeout", publishCmd.Flags().Lookup("timeout")))
+	cobra.CheckErr(viper.BindPFlag("branch", publishCmd.Flags().Lookup("branch")))
 }

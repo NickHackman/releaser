@@ -8,6 +8,7 @@ type keyMap struct {
 	Publish  key.Binding
 	Template key.Binding
 	Refresh  key.Binding
+	Open     key.Binding
 	More     key.Binding
 	Quit     key.Binding
 }
@@ -17,6 +18,10 @@ func newKeyMap() *keyMap {
 		Publish: key.NewBinding(
 			key.WithKeys("enter"),
 			key.WithHelp("enter", "publish tags"),
+		),
+		Open: key.NewBinding(
+			key.WithKeys("o"),
+			key.WithHelp("o", "open URL"),
 		),
 		Template: key.NewBinding(
 			key.WithKeys("t"),

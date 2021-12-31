@@ -7,10 +7,11 @@ import (
 )
 
 type Config struct {
-	Timeout        time.Duration
-	TemplateString string
-	Org            string
-	Width, Height  int
-	Releases       chan<- []*service.RepositoryReleaseResponse
+	Timeout              time.Duration
+	TemplateString       string
 	TemplateInstructions string
+	Org                  string
+	Branch               string
+	Width, Height        int
+	Releases             chan<- []*service.RepositoryReleaseResponse
 }
