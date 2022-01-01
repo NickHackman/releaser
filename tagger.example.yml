@@ -3,6 +3,13 @@ url: https://api.github.com/
 timeout: 1m0s
 # Defaults to the provided branch, or the default branch if not provided
 branch: main
+# Method to determine the new version.
+#
+# Methods:
+# major        Increment Major version 1.3.0 -> 2.0.0
+# minor        Increment Minor version 1.3.0 -> 1.4.0
+# patch        Increment Patch version 1.3.0 -> 1.3.1
+version: minor
 # URL used for authorization
 auth:
   url: https://github.com/
