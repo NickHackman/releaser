@@ -6,11 +6,13 @@
 
 Create releases for a whole GitHub organization with ease!
 
-![Showcase](./assets/releaser-walkthrough.mp4)
+https://user-images.githubusercontent.com/31719071/147860818-cfd3ce0c-2f04-45e0-b693-ffc221e064fa.mp4
 
 ## Objective
 
-The purpose of this projects stems from working on Agile teams that have a quick release cycle (weekly, bi-weekly). In my experience these teams usually have one team member that wastes
+The purpose of this projects stems from working on Agile teams that ha
+
+ve a quick release cycle (weekly, bi-weekly). In my experience these teams usually have one team member that wastes
 a day or so each cycle determining which of their 30+ GitHub repositories need to be released and writing up and releasing them.
 
 Releaser automates the entire process!
