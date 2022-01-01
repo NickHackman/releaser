@@ -63,7 +63,7 @@ func (m Model) statusBarView() string {
 }
 
 func (m Model) View() string {
-	preview := contentStyle.Width(m.viewport.Width).Render(m.viewport.View())
+	preview := contentStyle.Width(m.Width).Render(m.viewport.View())
 	body := style.Render(lipgloss.JoinVertical(lipgloss.Left, previewTitle, preview))
 
 	return lipgloss.JoinVertical(lipgloss.Left, body, m.statusBarView())
