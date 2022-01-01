@@ -37,6 +37,12 @@ func (m *Model) SetContent(content, branch, version string) {
 	m.version = version
 }
 
+func (m *Model) SetLoading() {
+	m.viewport.SetContent(loadingMessage)
+	m.branch = ""
+	m.version = ""
+}
+
 func (m *Model) SetSize(width, height int) {
 	m.Width = width
 

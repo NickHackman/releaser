@@ -245,6 +245,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Refresh):
 			m.repos = 0
 			m.channel = fetch(m.config, m.gh, m.config.Org)
+			m.preview.SetLoading()
 			cmds = append(cmds, m.progress.SetPercent(0), m.list.SetItems([]list.Item{}), m.Init())
 		}
 	}
