@@ -39,7 +39,18 @@ var templateInstructions string
 var publishCmd = &cobra.Command{
 	Use:   "publish",
 	Short: "Publish tags/releases to repositories in a GitHub organization",
-	Long:  "Publish tags/releases to repositories in a GitHub organization\n\n" + templateInstructions,
+	Long: `Publish tags/releases to repositories in a GitHub organization
+
+Version Methods:
+
+Method to determine the new version.
+
+Methods:
+major        Increment Major version 1.3.0 -> 2.0.0
+minor        Increment Minor version 1.3.0 -> 1.4.0
+patch        Increment Patch version 1.3.0 -> 1.3.1
+
+` + templateInstructions,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		token := viper.GetString("token")
 		url := viper.GetString("url")
