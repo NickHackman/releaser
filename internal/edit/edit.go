@@ -28,10 +28,11 @@ func runEditor(fileName string) error {
 		cmd = exec.Command(editor, "--wait", fileName)
 	default:
 		cmd = exec.Command(editor, fileName)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
 	}
+
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
 	return cmd.Run()
 }

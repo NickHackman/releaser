@@ -200,6 +200,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Refresh preview every time, since the current item may change
 			repository.RefreshPreview,
 		)
+
+		// TODO: when opening the editor to edit the preview or the template in some cases where the user enters input into the terminal
+		// Bubbletea will crash with an error of "Could not decode rune", which seems to be as a result of multiple runes being entered
 	case tea.KeyMsg:
 		if m.list.FilterState() == list.Filtering {
 			break
