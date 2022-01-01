@@ -28,6 +28,7 @@ import (
 	"github.com/NickHackman/tagger/internal/service"
 	"github.com/NickHackman/tagger/internal/tui"
 	"github.com/NickHackman/tagger/internal/tui/config"
+	"github.com/NickHackman/tagger/internal/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -60,12 +61,18 @@ patch        Increment Patch version 1.3.0 -> 1.3.1
 			return err
 		}
 
+		change, err := version.ChangeFromString(viper.GetString("version.change"))
+		if err != nil {
+			return err
+		}
+
 		config := &config.Config{
 			Branch:               viper.GetString("branch"),
 			Org:                  viper.GetString("org"),
 			Timeout:              viper.GetDuration("timeout"),
 			TemplateString:       viper.GetString("template"),
 			TemplateInstructions: templateInstructions,
+			VersionChange:        change,
 		}
 
 		return tui.Execute(gh, config)
@@ -79,9 +86,11 @@ func init() {
 	publishCmd.Flags().String("template", "", "Go template that is the default message for all tags/releases")
 	publishCmd.Flags().DurationP("timeout", "t", time.Minute, "Timeout duration to wait for GitHub to respond before exiting")
 	publishCmd.Flags().StringP("branch", "b", "", "Branch to create releases on (defaults to Repository's default branch)")
+	publishCmd.Flags().String("version.change", "", "Method to determine the new version based off the previous (major, minor, patch)")
 
 	cobra.CheckErr(viper.BindPFlag("template", publishCmd.Flags().Lookup("template")))
 	cobra.CheckErr(viper.BindPFlag("org", publishCmd.Flags().Lookup("org")))
 	cobra.CheckErr(viper.BindPFlag("timeout", publishCmd.Flags().Lookup("timeout")))
 	cobra.CheckErr(viper.BindPFlag("branch", publishCmd.Flags().Lookup("branch")))
+	cobra.CheckErr(viper.BindPFlag("version.change", publishCmd.Flags().Lookup("version.change")))
 }

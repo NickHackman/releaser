@@ -199,7 +199,6 @@ type ReleaseableRepoResponse struct {
 	LatestTag *github.RepositoryTag
 	Branches  []*github.Branch
 	Branch    string
-	Version   string
 }
 
 func (gh *GitHub) ReleaseableRepo(ctx context.Context, org string, repo *github.Repository, branch string) (*ReleaseableRepoResponse, error) {
@@ -249,7 +248,6 @@ func (gh *GitHub) ReleaseableRepo(ctx context.Context, org string, repo *github.
 		Repo:      repo,
 		Branches:  branches,
 		Branch:    branch,
-		Version:   version,
 	}, nil
 }
 

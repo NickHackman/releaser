@@ -13,6 +13,7 @@ import (
 	"github.com/NickHackman/tagger/internal/tui/bubbles/repository"
 	"github.com/NickHackman/tagger/internal/tui/colors"
 	"github.com/NickHackman/tagger/internal/tui/config"
+	"github.com/NickHackman/tagger/internal/version"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/progress"
@@ -85,7 +86,7 @@ func New(gh *service.GitHub, config *config.Config) *Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return awaitCmd(m.channel, m.config.TemplateString)
+	return awaitCmd(m.channel, m.config)
 }
 
 func (m *Model) updatePreview() {
@@ -197,7 +198,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		index := len(m.list.Items()) - 1
 		percent := float64(m.repos) / float64(msg.Total)
 		cmds = append(cmds,
-			awaitCmd(m.channel, m.config.TemplateString),
+			awaitCmd(m.channel, m.config),
 			m.progress.SetPercent(percent),
 			m.list.InsertItem(index, msg),
 			// Refresh preview every time, since the current item may change
@@ -331,7 +332,7 @@ func fetch(config *config.Config, gh *service.GitHub, org string) <-chan *servic
 	return channel
 }
 
-func awaitCmd(channel <-chan *service.ReleaseableRepoResponse, templateString string) tea.Cmd {
+func awaitCmd(channel <-chan *service.ReleaseableRepoResponse, config *config.Config) tea.Cmd {
 	return func() tea.Msg {
 		r, ok := <-channel
 		if !ok {
@@ -340,9 +341,9 @@ func awaitCmd(channel <-chan *service.ReleaseableRepoResponse, templateString st
 
 		return repository.Item{
 			ReleaseableRepoResponse: r,
-			Preview:                 template.Preview(r, templateString),
+			Preview:                 template.Preview(r, config.TemplateString),
 			Branch:                  r.Branch,
-			Version:                 r.Version,
+			Version:                 version.New(r.LatestTag.GetName(), config.VersionChange),
 		}
 	}
 }

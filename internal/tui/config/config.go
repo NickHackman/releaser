@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/NickHackman/tagger/internal/service"
+	"github.com/NickHackman/tagger/internal/version"
 )
 
 type Config struct {
@@ -14,4 +15,5 @@ type Config struct {
 	Branch               string
 	Width, Height        int
 	Releases             chan<- []*service.RepositoryReleaseResponse
+	VersionChange        version.Change
 }
