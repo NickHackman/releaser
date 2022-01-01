@@ -199,6 +199,7 @@ type ReleaseableRepoResponse struct {
 	LatestTag *github.RepositoryTag
 	Branches  []*github.Branch
 	Branch    string
+	Version   string
 }
 
 func (gh *GitHub) ReleaseableRepo(ctx context.Context, org string, repo *github.Repository, branch string) (*ReleaseableRepoResponse, error) {
@@ -237,7 +238,19 @@ func (gh *GitHub) ReleaseableRepo(ctx context.Context, org string, repo *github.
 		branch = repo.GetDefaultBranch()
 	}
 
-	return &ReleaseableRepoResponse{Commits: commits, LatestTag: tag, Repo: repo, Branches: branches, Branch: branch}, nil
+	version := tag.GetName()
+	if version == "" {
+		version = "v0.1.0"
+	}
+
+	return &ReleaseableRepoResponse{
+		Commits:   commits,
+		LatestTag: tag,
+		Repo:      repo,
+		Branches:  branches,
+		Branch:    branch,
+		Version:   version,
+	}, nil
 }
 
 // ReleaseableReposByOrg async retrival of GitHub repositories for an organization. Returns a channel to listen to for ReleasableRepos

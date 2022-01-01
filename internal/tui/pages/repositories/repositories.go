@@ -95,7 +95,7 @@ func (m *Model) updatePreview() {
 		return
 	}
 
-	m.preview.SetContent(current.Preview, current.Branch)
+	m.preview.SetContent(current.Preview, current.Branch, current.Version)
 }
 
 // handleEditTemplate opens the user's $EDITOR (or if none vim) and after they save/quit
@@ -135,6 +135,7 @@ func (m *Model) handleEditTemplate() []tea.Cmd {
 			ReleaseableRepoResponse: current.ReleaseableRepoResponse,
 			Preview:                 template.Preview(current.ReleaseableRepoResponse, result.Template),
 			Branch:                  current.Branch,
+			Version:                 current.Version,
 		}
 
 		// SetItems doubles the amount of items in the List
@@ -294,7 +295,7 @@ func (m *Model) handlePublish() {
 			continue
 		}
 
-		releases = append(releases, &service.RepositoryRelease{Name: i.Repo.GetName(), Version: "1.0.0", Body: i.Preview})
+		releases = append(releases, &service.RepositoryRelease{Name: i.Repo.GetName(), Version: i.Version, Body: i.Preview})
 	}
 
 	m.config.Releases <- m.gh.CreateReleases(ctx, m.config.Org, releases)
@@ -340,6 +341,7 @@ func awaitCmd(channel <-chan *service.ReleaseableRepoResponse, templateString st
 			ReleaseableRepoResponse: r,
 			Preview:                 template.Preview(r, templateString),
 			Branch:                  r.Branch,
+			Version:                 r.Version,
 		}
 	}
 }

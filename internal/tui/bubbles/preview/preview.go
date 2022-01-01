@@ -18,6 +18,7 @@ var (
 type Model struct {
 	viewport viewport.Model
 	branch   string
+	version  string
 	Width    int
 }
 
@@ -30,9 +31,10 @@ func New() Model {
 	}
 }
 
-func (m *Model) SetContent(content, branch string) {
+func (m *Model) SetContent(content, branch, version string) {
 	m.viewport.SetContent(content)
 	m.branch = branch
+	m.version = version
 }
 
 func (m *Model) SetSize(width, height int) {
@@ -59,7 +61,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) statusBarView() string {
-	return statusBarStyle.Render(branchIcon + " " + m.branch)
+	version := statusStyle.Render(m.version)
+	branch := statusStyle.Render(branchIcon + " " + m.branch)
+
+	sep := lipgloss.NewStyle().
+		Width(m.Width - lipgloss.Width(version) - lipgloss.Width(branch)).
+		Render("")
+
+	bar := lipgloss.JoinHorizontal(lipgloss.Left, version, sep, branch)
+
+	return statusBarStyle.Render(bar)
 }
 
 func (m Model) View() string {

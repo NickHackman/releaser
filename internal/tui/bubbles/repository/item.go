@@ -20,6 +20,7 @@ type Item struct {
 	Selected                         bool `yaml:"-"`
 	Preview                          string
 	Branch                           string
+	Version                          string
 }
 
 func (i Item) FilterValue() string {
@@ -32,6 +33,7 @@ func (i Item) Select() Item {
 		Preview:                 i.Preview,
 		Branch:                  i.Branch,
 		Selected:                !i.Selected,
+		Version:                 i.Version,
 	}
 }
 
@@ -50,11 +52,13 @@ func (i Item) Edit(gh *service.GitHub, config *config.Config) (Item, error) {
 	yamlRepresentation := map[string]interface{}{
 		"description": i.Preview,
 		"branch":      &yaml.Node{Kind: yaml.ScalarNode, Value: i.Branch, HeadComment: strings.Join(branchNames, "\n"), LineComment: editBranchInstructions},
+		"version":     i.Version,
 	}
 
 	var result *struct {
-		Description string
 		Branch      string
+		Version     string
+		Description string
 	}
 
 	if err := edit.Invoke(&yamlRepresentation, &result); err != nil {
@@ -81,5 +85,6 @@ func (i Item) Edit(gh *service.GitHub, config *config.Config) (Item, error) {
 		Selected:                i.Selected,
 		Preview:                 description,
 		Branch:                  result.Branch,
+		Version:                 result.Version,
 	}, nil
 }
