@@ -5,12 +5,12 @@ import (
 )
 
 type keyMap struct {
-	Publish  key.Binding
-	Template key.Binding
-	Refresh  key.Binding
-	Open     key.Binding
-	More     key.Binding
-	Quit     key.Binding
+	Publish       key.Binding
+	RefreshRepos  key.Binding
+	Open          key.Binding
+	RefreshConfig key.Binding
+	More          key.Binding
+	Quit          key.Binding
 }
 
 func newKeyMap() *keyMap {
@@ -23,13 +23,13 @@ func newKeyMap() *keyMap {
 			key.WithKeys("o"),
 			key.WithHelp("o", "open URL"),
 		),
-		Template: key.NewBinding(
-			key.WithKeys("t"),
-			key.WithHelp("t", "edit template"),
+		RefreshRepos: key.NewBinding(
+			key.WithKeys("R"),
+			key.WithHelp("R", "refresh repositories"),
 		),
-		Refresh: key.NewBinding(
+		RefreshConfig: key.NewBinding(
 			key.WithKeys("r"),
-			key.WithHelp("r", "refresh"),
+			key.WithHelp("r", "refresh config"),
 		),
 		Quit: key.NewBinding(
 			key.WithKeys("q", "ctrl+c"),

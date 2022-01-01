@@ -1,4 +1,4 @@
-package service
+package github
 
 import (
 	"context"
@@ -9,26 +9,26 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type GitHubBuilder struct {
+type Builder struct {
 	url   string
 	token string
 }
 
-func NewGitHub() *GitHubBuilder {
-	return &GitHubBuilder{}
+func New() *Builder {
+	return &Builder{}
 }
 
-func (ghb *GitHubBuilder) URL(url string) *GitHubBuilder {
+func (ghb *Builder) URL(url string) *Builder {
 	ghb.url = url
 	return ghb
 }
 
-func (ghb *GitHubBuilder) Token(token string) *GitHubBuilder {
+func (ghb *Builder) Token(token string) *Builder {
 	ghb.token = token
 	return ghb
 }
 
-func (ghb *GitHubBuilder) Build() (*GitHub, error) {
+func (ghb *Builder) Build() (*Client, error) {
 	if ghb.token == "" {
 		return nil, errors.New("failed to authenticate missing GitHub Oauth token.\nRun `releaser login`")
 	}
@@ -43,5 +43,5 @@ func (ghb *GitHubBuilder) Build() (*GitHub, error) {
 		return nil, err
 	}
 
-	return &GitHub{client: client}, nil
+	return &Client{client: client}, nil
 }

@@ -67,6 +67,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) statusBarView() string {
+	// Don't render if loading
+	if m.version == "" && m.branch == "" {
+		return "\n"
+	}
+
 	version := statusStyle.Render(m.version)
 	branch := statusStyle.Render(branchIcon + " " + m.branch)
 

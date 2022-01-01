@@ -1,11 +1,11 @@
 package organization
 
 import (
-	"github.com/NickHackman/releaser/internal/service"
+	"github.com/NickHackman/releaser/internal/github"
 )
 
 type Item struct {
-	*service.OrgResponse
+	*github.OrgResponse
 }
 
 func (i Item) FilterValue() string {

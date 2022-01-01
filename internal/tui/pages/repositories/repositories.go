@@ -1,26 +1,20 @@
 package repositories
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"strings"
 
-	"github.com/NickHackman/releaser/internal/edit"
-	"github.com/NickHackman/releaser/internal/service"
-	"github.com/NickHackman/releaser/internal/template"
+	"github.com/NickHackman/releaser/internal/config"
+	"github.com/NickHackman/releaser/internal/github"
 	"github.com/NickHackman/releaser/internal/tui/bubbles/preview"
 	"github.com/NickHackman/releaser/internal/tui/bubbles/repository"
 	"github.com/NickHackman/releaser/internal/tui/colors"
-	"github.com/NickHackman/releaser/internal/tui/config"
-	"github.com/NickHackman/releaser/internal/version"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/cli/browser"
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -35,13 +29,13 @@ type Model struct {
 	preview  preview.Model
 	keys     *keyMap
 
-	gh      *service.GitHub
-	channel <-chan *service.ReleaseableRepoResponse
+	gh      *github.Client
+	channel <-chan *github.ReleaseableRepoResponse
 	repos   int
 	config  *config.Config
 }
 
-func New(gh *service.GitHub, config *config.Config) *Model {
+func New(gh *github.Client, config *config.Config) *Model {
 	keys := newKeyMap()
 	delegate := repository.NewDelegate(gh, config)
 
@@ -49,27 +43,19 @@ func New(gh *service.GitHub, config *config.Config) *Model {
 	list.Title = fmt.Sprintf("%s Repositories", strings.Title(config.Org))
 	list.SetShowHelp(false)
 	list.Styles.Title = listTitleStyle
-	list.AdditionalFullHelpKeys = func() []key.Binding {
+
+	helpKeys := func() []key.Binding {
 		return []key.Binding{
 			delegate.Keys.Selection,
-			keys.Template,
 			keys.Open,
-			delegate.Keys.Edit,
 			keys.Publish,
-			keys.Refresh,
+			keys.RefreshConfig,
+			keys.RefreshRepos,
 		}
 	}
 
-	list.AdditionalShortHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			delegate.Keys.Selection,
-			keys.Template,
-			keys.Open,
-			delegate.Keys.Edit,
-			keys.Publish,
-			keys.Refresh,
-		}
-	}
+	list.AdditionalFullHelpKeys = helpKeys
+	list.AdditionalShortHelpKeys = helpKeys
 
 	m := &Model{
 		list:     list,
@@ -86,64 +72,7 @@ func New(gh *service.GitHub, config *config.Config) *Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return awaitCmd(m.channel, m.config)
-}
-
-func (m *Model) updatePreview() {
-	currentItem := m.list.SelectedItem()
-	current, ok := currentItem.(repository.Item)
-	if !ok {
-		return
-	}
-
-	m.preview.SetContent(current.Preview, current.Branch, current.Version)
-}
-
-// handleEditTemplate opens the user's $EDITOR (or if none vim) and after they save/quit
-// reads the template and applies the new template to every repository in the list.
-func (m *Model) handleEditTemplate() []tea.Cmd {
-	var cmds []tea.Cmd
-
-	yamlRepresentation := map[string]interface{}{
-		"template": &yaml.Node{
-			Value:       m.config.TemplateString,
-			Kind:        yaml.ScalarNode,
-			HeadComment: m.config.TemplateInstructions,
-		},
-	}
-
-	var result *struct {
-		Template string
-	}
-
-	if err := edit.Invoke(&yamlRepresentation, &result); err != nil {
-		return append(cmds, m.list.NewStatusMessage(fmt.Sprintf("Error: %v", err)))
-	}
-
-	if m.config.TemplateString == result.Template {
-		return cmds
-	}
-
-	m.config.TemplateString = result.Template
-
-	for i, item := range m.list.Items() {
-		current, ok := item.(repository.Item)
-		if !ok {
-			continue
-		}
-
-		newItem := repository.Item{
-			ReleaseableRepoResponse: current.ReleaseableRepoResponse,
-			Preview:                 template.Preview(current.ReleaseableRepoResponse, result.Template),
-			Branch:                  current.Branch,
-			Version:                 current.Version,
-		}
-
-		// SetItems doubles the amount of items in the List
-		cmds = append(cmds, m.list.SetItem(i, newItem))
-	}
-
-	return cmds
+	return loadRepositoriesCmd(m.channel, m.config)
 }
 
 func (m *Model) SetSize(width, height int) {
@@ -180,33 +109,41 @@ func (m Model) countSelected() int {
 	return selected
 }
 
+func (m *Model) refreshPreview() {
+	currentItem := m.list.SelectedItem()
+	current, ok := currentItem.(repository.Item)
+	if !ok {
+		return
+	}
+
+	m.preview.SetContent(current.Preview, current.Branch, current.Version)
+}
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds := m.updateSubmodels(msg)
 
 	switch msg := msg.(type) {
+	case errorCmd:
+		cmds = append(cmds, m.list.NewStatusMessage(msg.Error()))
 	case tea.WindowSizeMsg:
 		m.SetSize(msg.Width, msg.Height)
 	case progress.FrameMsg:
 		progressModel, cmd := m.progress.Update(msg)
 		m.progress = progressModel.(progress.Model)
 		cmds = append(cmds, cmd)
-	case repository.RefreshPreviewCmd:
-		m.updatePreview()
 	case repository.Item:
 		m.repos++
 
 		index := len(m.list.Items()) - 1
 		percent := float64(m.repos) / float64(msg.Total)
 		cmds = append(cmds,
-			awaitCmd(m.channel, m.config),
+			loadRepositoriesCmd(m.channel, m.config),
 			m.progress.SetPercent(percent),
 			m.list.InsertItem(index, msg),
-			// Refresh preview every time, since the current item may change
-			repository.RefreshPreview,
 		)
 
-		// TODO: when opening the editor to edit the preview or the template in some cases where the user enters input into the terminal
-		// Bubbletea will crash with an error of "Could not decode rune", which seems to be as a result of multiple runes being entered
+		// Refresh preview every time, since the current item may change
+		m.refreshPreview()
 	case tea.KeyMsg:
 		if m.list.FilterState() == list.Filtering {
 			break
@@ -217,33 +154,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Force reset size
 			m.SetSize(m.config.Width, m.config.Height)
 		case key.Matches(msg, m.keys.Open):
-			item, ok := m.list.SelectedItem().(repository.Item)
-			if !ok {
-				break
-			}
-
-			var output bytes.Buffer
-			browser.Stdout = &output
-
-			var statusMsg string
-			if err := browser.OpenURL(item.Repo.GetHTMLURL()); err != nil {
-				statusMsg = "Error: " + err.Error()
-			} else {
-				statusMsg = output.String()
-			}
-
-			cmds = append(cmds, m.list.NewStatusMessage(statusMsg))
-		case key.Matches(msg, m.keys.Template):
-			m.handleEditTemplate()
-			cmds = append(cmds, repository.RefreshPreview)
+			cmds = append(cmds, m.openURLCmd())
 		case key.Matches(msg, m.keys.Publish):
-			if m.countSelected() == 0 {
-				break
-			}
-
-			m.handlePublish()
-			return m, tea.Quit
-		case key.Matches(msg, m.keys.Refresh):
+			cmds = append(cmds, m.publishCmd())
+		case key.Matches(msg, m.keys.RefreshConfig):
+			m.config.Refresh()
+			cmds = append(cmds, m.list.NewStatusMessage("Refreshing config..."))
+			fallthrough // refresh all
+		case key.Matches(msg, m.keys.RefreshRepos):
 			m.repos = 0
 			m.channel = fetch(m.config, m.gh, m.config.Org)
 			m.preview.SetLoading()
@@ -274,7 +192,7 @@ func (m *Model) updateSubmodels(msg tea.Msg) []tea.Cmd {
 
 	// Only update preview if the current index has changed
 	if currentIndex != newIndex {
-		m.updatePreview()
+		m.refreshPreview()
 	}
 
 	var previewModel tea.Model
@@ -284,23 +202,6 @@ func (m *Model) updateSubmodels(msg tea.Msg) []tea.Cmd {
 	cmds = append(cmds, cmd)
 
 	return cmds
-}
-
-func (m *Model) handlePublish() {
-	ctx, cancel := context.WithTimeout(context.Background(), m.config.Timeout)
-	defer cancel()
-
-	var releases []*service.RepositoryRelease
-	for _, item := range m.list.Items() {
-		i, ok := item.(repository.Item)
-		if !ok || !i.Selected {
-			continue
-		}
-
-		releases = append(releases, &service.RepositoryRelease{Name: i.Repo.GetName(), Version: i.Version, Body: i.Preview})
-	}
-
-	m.config.Releases <- m.gh.CreateReleases(ctx, m.config.Org, releases)
 }
 
 func (m Model) statusView() string {
@@ -317,7 +218,7 @@ func (m Model) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, top, m.statusView())
 }
 
-func fetch(config *config.Config, gh *service.GitHub, org string) <-chan *service.ReleaseableRepoResponse {
+func fetch(config *config.Config, gh *github.Client, org string) <-chan *github.ReleaseableRepoResponse {
 	ctx, cancel := context.WithTimeout(context.Background(), config.Timeout)
 	channel, callback := gh.ReleasableReposByOrg(ctx, org, config.Branch)
 
@@ -330,20 +231,4 @@ func fetch(config *config.Config, gh *service.GitHub, org string) <-chan *servic
 	}()
 
 	return channel
-}
-
-func awaitCmd(channel <-chan *service.ReleaseableRepoResponse, config *config.Config) tea.Cmd {
-	return func() tea.Msg {
-		r, ok := <-channel
-		if !ok {
-			return nil
-		}
-
-		return repository.Item{
-			ReleaseableRepoResponse: r,
-			Preview:                 template.Preview(r, config.TemplateString),
-			Branch:                  r.Branch,
-			Version:                 version.New(r.LatestTag.GetName(), config.VersionChange),
-		}
-	}
 }

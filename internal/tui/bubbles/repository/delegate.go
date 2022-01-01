@@ -5,8 +5,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/NickHackman/releaser/internal/service"
-	"github.com/NickHackman/releaser/internal/tui/config"
+	"github.com/NickHackman/releaser/internal/config"
+	"github.com/NickHackman/releaser/internal/github"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,11 +15,11 @@ import (
 
 type Delegate struct {
 	Keys   *keyMap
-	gh     *service.GitHub
+	gh     *github.Client
 	config *config.Config
 }
 
-func NewDelegate(gh *service.GitHub, config *config.Config) Delegate {
+func NewDelegate(gh *github.Client, config *config.Config) Delegate {
 	return Delegate{
 		Keys:   newKeyMap(),
 		gh:     gh,
@@ -36,24 +36,9 @@ func (d Delegate) Spacing() int {
 }
 
 func (d Delegate) Update(msg tea.Msg, m *list.Model) tea.Cmd {
-	var cmds []tea.Cmd
-
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, d.Keys.Edit):
-			current, ok := m.SelectedItem().(Item)
-			if !ok {
-				break
-			}
-
-			newItem, err := current.Edit(d.gh, d.config)
-			if err != nil {
-				return m.NewStatusMessage(fmt.Sprintf("Error: %v", err))
-			}
-
-			index := m.Index()
-			cmds = append(cmds, m.SetItem(index, newItem), RefreshPreview)
 		case key.Matches(msg, d.Keys.Selection):
 			current, ok := m.SelectedItem().(Item)
 			if !ok {
@@ -62,11 +47,11 @@ func (d Delegate) Update(msg tea.Msg, m *list.Model) tea.Cmd {
 
 			index := m.Index()
 			newItem := current.Select()
-			cmds = append(cmds, m.SetItem(index, newItem), RefreshPreview)
+			return m.SetItem(index, newItem)
 		}
 	}
 
-	return tea.Batch(cmds...)
+	return nil
 }
 
 func (d Delegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {

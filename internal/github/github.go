@@ -1,4 +1,4 @@
-package service
+package github
 
 import (
 	"context"
@@ -15,7 +15,7 @@ const (
 	githubMaxPerPage = 100
 )
 
-type GitHub struct {
+type Client struct {
 	client *github.Client
 }
 
@@ -38,7 +38,7 @@ func (rrr *RepositoryReleaseResponse) IsError() bool {
 	return rrr.Error != nil
 }
 
-func (gh *GitHub) CreateReleases(ctx context.Context, owner string, releases []*RepositoryRelease) []*RepositoryReleaseResponse {
+func (gh *Client) CreateReleases(ctx context.Context, owner string, releases []*RepositoryRelease) []*RepositoryReleaseResponse {
 	c := make(chan *RepositoryReleaseResponse, len(releases))
 
 	var wg sync.WaitGroup
@@ -75,7 +75,7 @@ func (gh *GitHub) CreateReleases(ctx context.Context, owner string, releases []*
 }
 
 // createRelease Creates a GitHub release provided the owner/repo version and body where the name of the release and the tag will be version.
-func (gh *GitHub) createRelease(ctx context.Context, owner, repo, version, body string) (*github.RepositoryRelease, error) {
+func (gh *Client) createRelease(ctx context.Context, owner, repo, version, body string) (*github.RepositoryRelease, error) {
 	release := &github.RepositoryRelease{
 		TagName: github.String(version),
 		Body:    github.String(body),
@@ -94,7 +94,7 @@ func (gh *GitHub) createRelease(ctx context.Context, owner, repo, version, body 
 	return releaseResponse, nil
 }
 
-func (gh *GitHub) tags(ctx context.Context, owner, repo string) ([]*github.RepositoryTag, error) {
+func (gh *Client) tags(ctx context.Context, owner, repo string) ([]*github.RepositoryTag, error) {
 	next := 1
 
 	var tags []*github.RepositoryTag
@@ -122,7 +122,7 @@ func (gh *GitHub) tags(ctx context.Context, owner, repo string) ([]*github.Repos
 }
 
 // mostRecentTagAndChanges get the most recent commits and determine most recent tag for a branch, if branch is not provided the default branch will be used.
-func (gh *GitHub) mostRecentTagAndChanges(ctx context.Context, owner, repo string, tags []*github.RepositoryTag, branch string) (string, *github.RepositoryTag, []*github.RepositoryCommit, error) {
+func (gh *Client) mostRecentTagAndChanges(ctx context.Context, owner, repo string, tags []*github.RepositoryTag, branch string) (string, *github.RepositoryTag, []*github.RepositoryCommit, error) {
 	next := 1
 
 	var commitsSince []*github.RepositoryCommit
@@ -163,7 +163,7 @@ func (gh *GitHub) mostRecentTagAndChanges(ctx context.Context, owner, repo strin
 	return branch, nil, commitsSince, nil
 }
 
-func (gh *GitHub) branches(ctx context.Context, owner, repo string) ([]*github.Branch, error) {
+func (gh *Client) branches(ctx context.Context, owner, repo string) ([]*github.Branch, error) {
 	next := 1
 
 	var branches []*github.Branch
@@ -201,7 +201,7 @@ type ReleaseableRepoResponse struct {
 	Branch    string
 }
 
-func (gh *GitHub) ReleaseableRepo(ctx context.Context, org string, repo *github.Repository, branch string) (*ReleaseableRepoResponse, error) {
+func (gh *Client) ReleaseableRepo(ctx context.Context, org string, repo *github.Repository, branch string) (*ReleaseableRepoResponse, error) {
 	if repo.GetIsTemplate() {
 		return nil, nil
 	}
@@ -250,7 +250,7 @@ func (gh *GitHub) ReleaseableRepo(ctx context.Context, org string, repo *github.
 // and the function to run as a goroutine to acquire them.
 //
 // Filters out: archived, templates, repositories with 0 new commits since last Tag
-func (gh *GitHub) ReleasableReposByOrg(ctx context.Context, org, branch string) (<-chan *ReleaseableRepoResponse, func() error) {
+func (gh *Client) ReleasableReposByOrg(ctx context.Context, org, branch string) (<-chan *ReleaseableRepoResponse, func() error) {
 	c := make(chan *ReleaseableRepoResponse)
 	next := 1
 	var total int32
@@ -321,7 +321,7 @@ type OrgResponse struct {
 
 // Orgs async retrival of GitHub organizations. Returns a channel to listen to for OrgsResponse
 // and the function to run as a goroutine to acquire them.
-func (gh *GitHub) Orgs(ctx context.Context) (<-chan *OrgResponse, func() error) {
+func (gh *Client) Orgs(ctx context.Context) (<-chan *OrgResponse, func() error) {
 	c := make(chan *OrgResponse)
 	next := 1
 

@@ -22,19 +22,15 @@ THE SOFTWARE.
 package cmd
 
 import (
-	_ "embed"
 	"time"
 
-	"github.com/NickHackman/releaser/internal/service"
+	"github.com/NickHackman/releaser/internal/config"
+	"github.com/NickHackman/releaser/internal/github"
 	"github.com/NickHackman/releaser/internal/tui"
-	"github.com/NickHackman/releaser/internal/tui/config"
 	"github.com/NickHackman/releaser/internal/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
-
-//go:embed template-instructions.txt
-var templateInstructions string
 
 // publishCmd represents the publish command
 var publishCmd = &cobra.Command{
@@ -51,12 +47,42 @@ major        Increment Major version 1.3.0 -> 2.0.0
 minor        Increment Minor version 1.3.0 -> 1.4.0
 patch        Increment Patch version 1.3.0 -> 1.3.1
 
-` + templateInstructions,
+Template Instructions
+
+Top Level Variables:
+{{ .RepositoryName }}                  hello-world	
+{{ .RepositoryOwner }}                 octocat
+{{ .RepositoryURL }}                   https://github.com/octocat/hello-world	
+{{ .RepositoryDescription }}           Example description
+{{ .RepositoryDefaultBranch }}         main
+{{ .Commits }}                         List of commits
+
+Commit:
+{{ .Sha }}                             Unique identifier for commit
+{{ .URL }}                             URL to commit
+{{ .Summary }}                         First line of the commit message
+{{ .Message }}                         Full commit message (includes newlines)
+
+Author/Committer:
+{{ .AuthorUsername }}                  octocat (GitHub Username)
+{{ .AuthorName }}                      octocat (Commit Name)
+{{ .AuthorEmail }}                     octocat@github.com
+{{ .AuthorDate }} 
+{{ .AuthorURL }}                       https://github.com/octocat
+
+Templates also include Sprig functions: https://masterminds.github.io/sprig/strings.html
+
+Example:
+
+{{ range .Commits }}
+{{ substr 0 8 .Sha }} committed by {{ .CommitterUsername }} and authored by {{ .AuthorUsername }} {{ .Summary }}
+{{ end }}
+`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		token := viper.GetString("token")
 		url := viper.GetString("url")
 
-		gh, err := service.NewGitHub().URL(url).Token(token).Build()
+		gh, err := github.New().URL(url).Token(token).Build()
 		if err != nil {
 			return err
 		}
@@ -67,12 +93,11 @@ patch        Increment Patch version 1.3.0 -> 1.3.1
 		}
 
 		config := &config.Config{
-			Branch:               viper.GetString("branch"),
-			Org:                  viper.GetString("org"),
-			Timeout:              viper.GetDuration("timeout"),
-			TemplateString:       viper.GetString("template"),
-			TemplateInstructions: templateInstructions,
-			VersionChange:        change,
+			Branch:         viper.GetString("branch"),
+			Org:            viper.GetString("org"),
+			Timeout:        viper.GetDuration("timeout"),
+			TemplateString: viper.GetString("template"),
+			VersionChange:  change,
 		}
 
 		return tui.Execute(gh, config)

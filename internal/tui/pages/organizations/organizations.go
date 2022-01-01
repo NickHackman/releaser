@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/NickHackman/releaser/internal/service"
+	"github.com/NickHackman/releaser/internal/config"
+	"github.com/NickHackman/releaser/internal/github"
 	"github.com/NickHackman/releaser/internal/tui/bubbles/organization"
 	"github.com/NickHackman/releaser/internal/tui/colors"
-	"github.com/NickHackman/releaser/internal/tui/config"
 	"github.com/NickHackman/releaser/internal/tui/pages/repositories"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -26,14 +26,14 @@ type Model struct {
 	progress progress.Model
 	keys     *keyMap
 
-	gh      *service.GitHub
-	channel <-chan *service.OrgResponse
+	gh      *github.Client
+	channel <-chan *github.OrgResponse
 	orgs    int
 
 	config *config.Config
 }
 
-func New(gh *service.GitHub, config *config.Config) *Model {
+func New(gh *github.Client, config *config.Config) *Model {
 	listKeys := newOrganizationsListKeyMap()
 
 	list := list.NewModel([]list.Item{}, organization.Delegate{}, 0, 0)
@@ -58,7 +58,7 @@ func New(gh *service.GitHub, config *config.Config) *Model {
 	}
 }
 
-func fetch(config *config.Config, gh *service.GitHub) <-chan *service.OrgResponse {
+func fetch(config *config.Config, gh *github.Client) <-chan *github.OrgResponse {
 	ctx, cancel := context.WithTimeout(context.Background(), config.Timeout)
 	channel, callback := gh.Orgs(ctx)
 
@@ -148,7 +148,7 @@ func (m Model) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, m.list.View(), m.progress.View())
 }
 
-func awaitCmd(channel <-chan *service.OrgResponse) tea.Cmd {
+func awaitCmd(channel <-chan *github.OrgResponse) tea.Cmd {
 	return func() tea.Msg {
 		org, ok := <-channel
 		if !ok {
