@@ -1,3 +1,3 @@
-# tagger
+# releaser
 
-Create tags for a whole GitHub organization with ease
+Create releases for a whole GitHub organization with ease

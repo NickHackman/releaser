@@ -3,11 +3,11 @@ package tui
 import (
 	"fmt"
 
-	"github.com/NickHackman/tagger/internal/service"
-	"github.com/NickHackman/tagger/internal/tui/colors"
-	"github.com/NickHackman/tagger/internal/tui/config"
-	"github.com/NickHackman/tagger/internal/tui/pages/organizations"
-	"github.com/NickHackman/tagger/internal/tui/pages/repositories"
+	"github.com/NickHackman/releaser/internal/service"
+	"github.com/NickHackman/releaser/internal/tui/colors"
+	"github.com/NickHackman/releaser/internal/tui/config"
+	"github.com/NickHackman/releaser/internal/tui/pages/organizations"
+	"github.com/NickHackman/releaser/internal/tui/pages/repositories"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )

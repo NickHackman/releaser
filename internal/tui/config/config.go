@@ -3,8 +3,8 @@ package config
 import (
 	"time"
 
-	"github.com/NickHackman/tagger/internal/service"
-	"github.com/NickHackman/tagger/internal/version"
+	"github.com/NickHackman/releaser/internal/service"
+	"github.com/NickHackman/releaser/internal/version"
 )
 
 type Config struct {

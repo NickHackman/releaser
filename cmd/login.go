@@ -48,9 +48,9 @@ var loginCmd = &cobra.Command{
 
 Examples:
 
-tagger login
+releaser login
 
-tagger login --auth.url git.enterprise.com`,
+releaser login --auth.url git.enterprise.com`,
 	Run: func(cmd *cobra.Command, args []string) {
 		token, err := githubOauthFlow()
 		cobra.CheckErr(err)

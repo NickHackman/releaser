@@ -17,7 +17,7 @@ func newKeyMap() *keyMap {
 	keys := &keyMap{
 		Publish: key.NewBinding(
 			key.WithKeys("enter"),
-			key.WithHelp("enter", "publish tags"),
+			key.WithHelp("enter", "create release(s)"),
 		),
 		Open: key.NewBinding(
 			key.WithKeys("o"),

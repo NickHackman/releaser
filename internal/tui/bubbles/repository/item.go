@@ -4,10 +4,10 @@ import (
 	"context"
 	"strings"
 
-	"github.com/NickHackman/tagger/internal/edit"
-	"github.com/NickHackman/tagger/internal/service"
-	"github.com/NickHackman/tagger/internal/template"
-	"github.com/NickHackman/tagger/internal/tui/config"
+	"github.com/NickHackman/releaser/internal/edit"
+	"github.com/NickHackman/releaser/internal/service"
+	"github.com/NickHackman/releaser/internal/template"
+	"github.com/NickHackman/releaser/internal/tui/config"
 	"gopkg.in/yaml.v3"
 )
 

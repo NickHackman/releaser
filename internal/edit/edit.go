@@ -39,7 +39,7 @@ func runEditor(fileName string) error {
 
 func createTempFile(content []byte) (string, error) {
 	tempDir := os.TempDir()
-	f, err := ioutil.TempFile(tempDir, "tagger-*.yml")
+	f, err := ioutil.TempFile(tempDir, "releaser-*.yml")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp file: %v", err)
 	}

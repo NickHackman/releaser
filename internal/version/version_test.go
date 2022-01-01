@@ -3,7 +3,7 @@ package version_test
 import (
 	"testing"
 
-	"github.com/NickHackman/tagger/internal/version"
+	"github.com/NickHackman/releaser/internal/version"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 package main
 
-import "github.com/NickHackman/tagger/cmd"
+import "github.com/NickHackman/releaser/cmd"
 
 func main() {
 	cmd.Execute()

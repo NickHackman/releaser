@@ -30,7 +30,7 @@ func (ghb *GitHubBuilder) Token(token string) *GitHubBuilder {
 
 func (ghb *GitHubBuilder) Build() (*GitHub, error) {
 	if ghb.token == "" {
-		return nil, errors.New("failed to authenticate missing GitHub Oauth token.\nRun `tagger login`")
+		return nil, errors.New("failed to authenticate missing GitHub Oauth token.\nRun `releaser login`")
 	}
 
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: ghb.token})

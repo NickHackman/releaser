@@ -237,11 +237,6 @@ func (gh *GitHub) ReleaseableRepo(ctx context.Context, org string, repo *github.
 		branch = repo.GetDefaultBranch()
 	}
 
-	version := tag.GetName()
-	if version == "" {
-		version = "v0.1.0"
-	}
-
 	return &ReleaseableRepoResponse{
 		Commits:   commits,
 		LatestTag: tag,

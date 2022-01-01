@@ -1,4 +1,4 @@
-module github.com/NickHackman/tagger
+module github.com/NickHackman/releaser
 
 go 1.17
 

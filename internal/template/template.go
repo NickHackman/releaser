@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/Masterminds/sprig"
-	"github.com/NickHackman/tagger/internal/service"
+	"github.com/NickHackman/releaser/internal/service"
 	"github.com/google/go-github/v41/github"
 )
 
-type tag struct {
+type release struct {
 	params map[string]interface{}
 }
 
@@ -56,14 +56,14 @@ func commitFrom(c *github.RepositoryCommit) *commit {
 	}
 }
 
-func new(repo *github.Repository, commits []*github.RepositoryCommit) *tag {
+func new(repo *github.Repository, commits []*github.RepositoryCommit) *release {
 	var templateCommits []*commit
 
 	for _, c := range commits {
 		templateCommits = append(templateCommits, commitFrom(c))
 	}
 
-	return &tag{
+	return &release{
 		params: map[string]interface{}{
 			"RepositoryName":          repo.GetName(),
 			"RepositoryOwner":         repo.GetOwner().GetLogin(),
@@ -75,7 +75,7 @@ func new(repo *github.Repository, commits []*github.RepositoryCommit) *tag {
 	}
 }
 
-func (tag *tag) execute(templatedString string) (string, error) {
+func (r *release) execute(templatedString string) (string, error) {
 	sf := sprig.TxtFuncMap()
 
 	t, err := template.New("template").Funcs(sf).Parse(templatedString)
@@ -84,7 +84,7 @@ func (tag *tag) execute(templatedString string) (string, error) {
 	}
 
 	var buf bytes.Buffer
-	if err := t.Execute(&buf, tag.params); err != nil {
+	if err := t.Execute(&buf, r.params); err != nil {
 		return "", fmt.Errorf("failed to execute template: %v", err)
 	}
 
@@ -92,8 +92,8 @@ func (tag *tag) execute(templatedString string) (string, error) {
 }
 
 func Preview(r *service.ReleaseableRepoResponse, templatedString string) string {
-	tagTemplate := new(r.Repo, r.Commits)
-	content, err := tagTemplate.execute(templatedString)
+	releaseTemplate := new(r.Repo, r.Commits)
+	content, err := releaseTemplate.execute(templatedString)
 	if err != nil {
 		content = fmt.Sprintf("%s\n\n# Error: %v", templatedString, err)
 	}

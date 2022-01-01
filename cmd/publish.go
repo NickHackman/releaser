@@ -25,10 +25,10 @@ import (
 	_ "embed"
 	"time"
 
-	"github.com/NickHackman/tagger/internal/service"
-	"github.com/NickHackman/tagger/internal/tui"
-	"github.com/NickHackman/tagger/internal/tui/config"
-	"github.com/NickHackman/tagger/internal/version"
+	"github.com/NickHackman/releaser/internal/service"
+	"github.com/NickHackman/releaser/internal/tui"
+	"github.com/NickHackman/releaser/internal/tui/config"
+	"github.com/NickHackman/releaser/internal/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -39,8 +39,8 @@ var templateInstructions string
 // publishCmd represents the publish command
 var publishCmd = &cobra.Command{
 	Use:   "publish",
-	Short: "Publish tags/releases to repositories in a GitHub organization",
-	Long: `Publish tags/releases to repositories in a GitHub organization
+	Short: "Publish releases to repositories in a GitHub organization",
+	Long: `Publish releases to repositories in a GitHub organization
 
 Version Methods:
 
@@ -82,8 +82,8 @@ patch        Increment Patch version 1.3.0 -> 1.3.1
 func init() {
 	rootCmd.AddCommand(publishCmd)
 
-	publishCmd.Flags().StringP("org", "o", "", "GitHub organization to create tags")
-	publishCmd.Flags().String("template", "", "Go template that is the default message for all tags/releases")
+	publishCmd.Flags().StringP("org", "o", "", "GitHub organization to create releases")
+	publishCmd.Flags().String("template", "", "Go template that is the default message for all releases")
 	publishCmd.Flags().DurationP("timeout", "t", time.Minute, "Timeout duration to wait for GitHub to respond before exiting")
 	publishCmd.Flags().StringP("branch", "b", "", "Branch to create releases on (defaults to Repository's default branch)")
 	publishCmd.Flags().String("version.change", "", "Method to determine the new version based off the previous (major, minor, patch)")

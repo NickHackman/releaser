@@ -1,4 +1,4 @@
-BIN=tagger
+BIN=releaser
 SRC=$(shell find . -name "*.go")
 
 .PHONY: build help test fmt lint clean run test-cover

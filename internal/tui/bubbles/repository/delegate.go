@@ -5,8 +5,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/NickHackman/tagger/internal/service"
-	"github.com/NickHackman/tagger/internal/tui/config"
+	"github.com/NickHackman/releaser/internal/service"
+	"github.com/NickHackman/releaser/internal/tui/config"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"

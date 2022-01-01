@@ -33,26 +33,26 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "tagger",
-	Short: "Create tags for a whole GitHub organization with ease",
+	Use:   "releaser",
+	Short: "Create releases for a whole GitHub organization with ease",
 	Long: `A CLI application that will take the diff of all repositories 
-in a GitHub organization and create Tags/Releases for only the repositories
-that have changes. The description/message associated with the Tag/Release is
-a Go Sprig Template that will be used by default for all messages.
+in a GitHub organization and create releases for only the repositories
+that have changes. The description associated with the release is
+a Go Sprig template that will be used by default for all descriptions.
 
 GitHub Oauth:
 
-tagger login
+releaser login
 
-tagger --url "git.enterprise.com" login
+releaser --url "git.enterprise.com" login
 
 Examples:
 
-tagger publish --org "GitHub org"
+releaser publish --org "GitHub org"
 
-tagger --config "tagger.yml" publish --org "GitHub org"
+releaser --config "releaser.yml" publish --org "GitHub org"
 
-tagger publish --org "GitHub org" --template "This is an example"`,
+releaser publish --org "GitHub org" --template "This is an example"`,
 	Run: func(cmd *cobra.Command, args []string) {},
 }
 
@@ -65,7 +65,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $XDG_CONFIG_HOME/tagger.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $XDG_CONFIG_HOME/releaser.yaml)")
 	rootCmd.PersistentFlags().String("url", "https://api.github.com/", "GitHub API url")
 	rootCmd.PersistentFlags().String("token", "", "GitHub Oauth Token")
 
@@ -83,10 +83,10 @@ func initConfig() {
 		config, err := os.UserConfigDir()
 		cobra.CheckErr(err)
 
-		// Search config in config directory with name "tagger" (without extension).
+		// Search config in config directory with name "releaser" (without extension).
 		viper.AddConfigPath(config)
 		viper.SetConfigType("yaml")
-		viper.SetConfigName("tagger")
+		viper.SetConfigName("releaser")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
