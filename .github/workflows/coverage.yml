@@ -1,0 +1,21 @@
+name: coverage
+on: [push, pull_request]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    env:
+      GO111MODULE: "on"
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.5
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # TODO: use Coveralls or something else to report code coverage
+      - name: Coverage
+        run: |
+          make test-cover
