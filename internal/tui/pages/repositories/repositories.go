@@ -24,6 +24,7 @@ import (
 
 const (
 	minTerminalWidth         = 150
+	listWidth                = 75
 	increaseTerminalWidthMsg = "Increase width of terminal to display content."
 )
 
@@ -146,14 +147,15 @@ func (m *Model) handleEditTemplate() []tea.Cmd {
 func (m *Model) SetSize(width, height int) {
 	m.config.Width, m.config.Height = width, height
 
+	statusHeight := lipgloss.Height(m.statusView())
+
+	m.list.SetSize(width, height-statusHeight-1)
+
 	// Status bars take up full width of screen
 	m.progress.Width = width
 	m.list.Help.Width = width
 
-	statusHeight := lipgloss.Height(m.statusView())
-	listWidth := max(width, minTerminalWidth)
-	m.list.SetSize(listWidth, height-statusHeight-1)
-	m.preview.SetSize(width, height-statusHeight-1)
+	m.preview.SetSize(width-listWidth, height-statusHeight-1)
 }
 
 func (m Model) countSelected() int {
@@ -340,12 +342,4 @@ func awaitCmd(channel <-chan *service.ReleaseableRepoResponse, templateString st
 			Branch:                  r.Branch,
 		}
 	}
-}
-
-func max(a, b int) int {
-	if a < b {
-		return b
-	}
-
-	return a
 }

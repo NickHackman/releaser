@@ -7,5 +7,5 @@ import (
 
 var (
 	listTitleStyle = lipgloss.NewStyle().Padding(1).Background(colors.Title).Bold(true)
-	listStyle      = lipgloss.NewStyle().PaddingRight(1).Width(minTerminalWidth / 2).MaxWidth(minTerminalWidth / 2)
+	listStyle      = lipgloss.NewStyle().PaddingRight(1).Width(listWidth).MaxWidth(listWidth)
 )
