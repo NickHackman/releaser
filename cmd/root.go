@@ -22,6 +22,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -92,6 +93,10 @@ func initConfig() {
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
-	err := viper.ReadInConfig()
-	cobra.CheckErr(err)
+	if err := viper.ReadInConfig(); err != nil {
+		fmt.Println(err)
+		fmt.Printf("An example configuration file can be found at https://github.com/NickHackman/releaser/blob/main/releaser.example.yml\n")
+
+		os.Exit(1)
+	}
 }
