@@ -2,7 +2,6 @@ package repository
 
 import (
 	"github.com/NickHackman/releaser/internal/github"
-	"github.com/google/uuid"
 )
 
 type Item struct {
@@ -11,7 +10,6 @@ type Item struct {
 	Preview                         string
 	Branch                          string
 	Version                         string
-	ID                              uuid.UUID
 }
 
 func (i Item) FilterValue() string {
