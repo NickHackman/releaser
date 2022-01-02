@@ -21,6 +21,7 @@ const (
 	minTerminalWidth         = 150
 	listWidth                = 75
 	increaseTerminalWidthMsg = "Increase width of terminal to display content."
+	refreshConfigMsg         = "Refreshing config..."
 )
 
 type Model struct {
@@ -158,8 +159,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Publish):
 			cmds = append(cmds, m.publishCmd())
 		case key.Matches(msg, m.keys.RefreshConfig):
-			m.config.Refresh()
-			cmds = append(cmds, m.list.NewStatusMessage("Refreshing config..."))
+			if err := m.config.Refresh(); err != nil {
+				cmds = append(cmds, m.list.NewStatusMessage(err.Error()))
+			} else {
+				cmds = append(cmds, m.list.NewStatusMessage(refreshConfigMsg))
+			}
 			fallthrough // refresh all
 		case key.Matches(msg, m.keys.RefreshRepos):
 			m.repos = 0

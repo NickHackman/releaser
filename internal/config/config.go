@@ -18,10 +18,9 @@ type Config struct {
 	VersionChange  version.Change
 }
 
-func (c *Config) Refresh() {
-	// TODO: don't silently fail
+func (c *Config) Refresh() error {
 	if err := viper.ReadInConfig(); err != nil {
-		return
+		return err
 	}
 
 	c.Branch = viper.GetString("branch")
@@ -30,8 +29,10 @@ func (c *Config) Refresh() {
 
 	change, err := version.ChangeFromString(viper.GetString("version.change"))
 	if err != nil {
-		return
+		return err
 	}
 
 	c.VersionChange = change
+
+	return nil
 }
