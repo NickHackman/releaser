@@ -22,37 +22,61 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
+	"os"
+
+	"github.com/NickHackman/releaser/internal/config"
 	"github.com/NickHackman/releaser/internal/github"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"golang.org/x/net/context"
 )
 
 // loginCmd represents the login command
 var loginCmd = &cobra.Command{
 	Use:   "login",
-	Short: "Log into GitHub",
-	Long: `Authenticate with GitHub to perform other operations.
+	Short: "Log into GitHub or GitHub Enterprise",
+	Long: `Log into Github or Github Enterprise.
 
 Examples:
 
 releaser login
 
-releaser login --auth.url git.enterprise.com`,
+releaser --host git.enterprise.com login`,
 	Run: func(cmd *cobra.Command, args []string) {
-		host := viper.GetString("host")
-		token, err := github.Auth(host)
+		if err := config.InitViper(cfgFile, cmd); err != nil {
+			if CreatedConfigErr, ok := err.(config.CreatedConfigErr); ok {
+				fmt.Println(CreatedConfigErr.Error())
+				os.Exit(0)
+			} else {
+				cobra.CheckErr(err)
+			}
+		}
+
+		c, err := config.Load()
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		token, err := github.Auth(c.Host)
 		cobra.CheckErr(err)
 
-		config := viper.GetViper()
-		config.Set("token", token)
-		err = config.WriteConfig()
+		c.Token = token
+
+		gh, err := github.New().Host(c.Host).Token(c.Token).Build()
+		cobra.CheckErr(err)
+
+		ctx, cancel := context.WithTimeout(context.Background(), c.Timeout)
+		defer cancel()
+
+		username, err := gh.Username(ctx)
+		cobra.CheckErr(err)
+
+		err = c.SaveHost(config.Auth{Username: username, Token: token})
 		cobra.CheckErr(err)
 	},
 }
 
 func init() {
-	loginCmd.Flags().String("auth.url", "https://github.com/", "GitHub url")
-	cobra.CheckErr(viper.BindPFlag("auth.url", loginCmd.Flags().Lookup("auth.url")))
-
 	rootCmd.AddCommand(loginCmd)
 }

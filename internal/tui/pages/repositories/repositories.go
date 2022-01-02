@@ -72,7 +72,7 @@ func New(gh *github.Client, config *config.Config) *Model {
 		config:   config,
 	}
 
-	m.SetSize(config.Width, config.Height)
+	m.SetSize(config.Size())
 	return m
 }
 
@@ -81,7 +81,7 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m *Model) SetSize(width, height int) {
-	m.config.Width, m.config.Height = width, height
+	m.config.SetSize(width, height)
 
 	statusHeight := lipgloss.Height(m.statusView())
 
@@ -157,7 +157,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case key.Matches(msg, m.keys.More):
 			// Force reset size
-			m.SetSize(m.config.Width, m.config.Height)
+			m.SetSize(m.config.Size())
 		case key.Matches(msg, m.keys.Open):
 			cmds = append(cmds, m.openURLCmd())
 		case key.Matches(msg, m.keys.Publish):
@@ -218,7 +218,8 @@ func (m Model) statusView() string {
 }
 
 func (m Model) View() string {
-	if m.config.Width < minTerminalWidth {
+	w, _ := m.config.Size()
+	if w < minTerminalWidth {
 		return increaseTerminalWidthMsg
 	}
 

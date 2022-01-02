@@ -38,7 +38,7 @@ func (m *Model) publishCmd() tea.Cmd {
 			releases = append(releases, &github.RepositoryRelease{Name: i.Repo.GetName(), Version: i.Version, Body: i.Preview})
 		}
 
-		m.config.Releases <- m.gh.CreateReleases(ctx, m.config.Org, releases)
+		m.config.Terminal.Releases <- m.gh.CreateReleases(ctx, m.config.Org, releases)
 		return tea.Quit
 	}
 }
@@ -70,7 +70,7 @@ func loadRepositoriesCmd(channel <-chan *github.ReleaseableRepoResponse, config 
 
 		return repository.Item{
 			ReleaseableRepoResponse: r,
-			Preview:                 previewContent(r, config.TemplateString),
+			Preview:                 previewContent(r, config.Template),
 			Branch:                  r.Branch,
 			Version:                 version.New(r.LatestTag.GetName(), config.VersionChange),
 		}

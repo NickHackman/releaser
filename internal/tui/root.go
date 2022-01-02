@@ -14,7 +14,7 @@ import (
 
 func Execute(gh *github.Client, config *config.Config) error {
 	releasesChan := make(chan []*github.RepositoryReleaseResponse, 1)
-	config.Releases = releasesChan
+	config.Terminal.Releases = releasesChan
 
 	var page tea.Model = organizations.New(gh, config)
 	if config.Org != "" {

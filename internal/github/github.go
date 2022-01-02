@@ -339,7 +339,7 @@ func (gh *Client) Orgs(ctx context.Context) (<-chan *OrgResponse, func() error) 
 			}
 
 			if err := github.CheckResponse(r.Response); err != nil {
-				return fmt.Errorf("failed to get organization for authenticate user: %v", err)
+				return fmt.Errorf("failed to get organizations for authenticated user: %v", err)
 			}
 
 			for _, org := range orgs {
@@ -373,4 +373,18 @@ func (gh *Client) Orgs(ctx context.Context) (<-chan *OrgResponse, func() error) 
 
 		return nil
 	}
+}
+
+// Username get the username for the currently authenticated user.
+func (gh *Client) Username(ctx context.Context) (string, error) {
+	user, r, err := gh.client.Users.Get(ctx, "")
+	if err != nil {
+		return "", fmt.Errorf("failed to get authenticated user: %v", err)
+	}
+
+	if err := github.CheckResponse(r.Response); err != nil {
+		return "", fmt.Errorf("failed to get authenticated user: %v", err)
+	}
+
+	return user.GetLogin(), nil
 }

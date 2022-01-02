@@ -1,5 +1,5 @@
-# GitHub API URL
-url: https://api.github.com/
+# GitHub or GitHub Enterprise hostname
+host: github.com
 timeout: 1m0s
 # Defaults to the provided branch, or the default branch if not provided
 branch: main
@@ -11,9 +11,6 @@ branch: main
 # patch        Increment Patch version 1.3.0 -> 1.3.1
 version:
   change: minor
-# URL used for authorization
-auth:
-  url: https://github.com/
 # Template
 #
 # Top Level Variables:

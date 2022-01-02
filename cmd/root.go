@@ -24,22 +24,14 @@ package cmd
 import (
 	_ "embed"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/NickHackman/releaser/internal/config"
 	"github.com/NickHackman/releaser/internal/github"
 	"github.com/NickHackman/releaser/internal/tui"
-	"github.com/NickHackman/releaser/internal/version"
 	"github.com/spf13/cobra"
-
-	"github.com/spf13/viper"
 )
-
-//go:embed releaser.example.yml
-var exampleConfig []byte
 
 var cfgFile string
 
@@ -102,29 +94,30 @@ releaser login --auth.url git.enterprise.com
 
 releaser --org example --version.change minor
 `,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		token := viper.GetString("token")
-		host := viper.GetString("host")
-
-		gh, err := github.New().Host(host).Token(token).Build()
-		if err != nil {
-			return err
+	Run: func(cmd *cobra.Command, args []string) {
+		if err := config.InitViper(cfgFile, cmd); err != nil {
+			if CreatedConfigErr, ok := err.(config.CreatedConfigErr); ok {
+				fmt.Println(CreatedConfigErr.Error())
+				os.Exit(0)
+			} else {
+				cobra.CheckErr(err)
+			}
 		}
 
-		change, err := version.ChangeFromString(viper.GetString("version.change"))
-		if err != nil {
-			return err
+		config, err := config.Load()
+		cobra.CheckErr(err)
+
+		if err := config.CheckAuth(); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
 		}
 
-		config := &config.Config{
-			Branch:         viper.GetString("branch"),
-			Org:            viper.GetString("org"),
-			Timeout:        viper.GetDuration("timeout"),
-			TemplateString: viper.GetString("template"),
-			VersionChange:  change,
-		}
+		gh, err := github.New().Host(config.Host).Token(config.Token).Build()
+		cobra.CheckErr(err)
 
-		return tui.Execute(gh, config)
+		cobra.CheckErr(
+			tui.Execute(gh, config),
+		)
 	},
 }
 
@@ -135,60 +128,12 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
-
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $XDG_CONFIG_HOME/releaser.yaml)")
-	rootCmd.Flags().String("host", "github.com", "Hostname of GitHub or GitHub Enterprise")
+	rootCmd.PersistentFlags().String("host", "github.com", "Hostname of GitHub or GitHub Enterprise")
 	rootCmd.Flags().String("token", "", "GitHub Oauth Token")
 	rootCmd.Flags().StringP("org", "o", "", "GitHub organization to create releases")
 	rootCmd.Flags().String("template", "", "Go template that is the default message for all releases")
 	rootCmd.Flags().DurationP("timeout", "t", time.Minute, "Timeout duration to wait for GitHub to respond before exiting")
 	rootCmd.Flags().StringP("branch", "b", "", "Branch to create releases on (defaults to Repository's default branch)")
 	rootCmd.Flags().String("version.change", "", "Method to determine the new version based off the previous (major, minor, patch)")
-
-	cobra.CheckErr(viper.BindPFlag("template", rootCmd.Flags().Lookup("template")))
-	cobra.CheckErr(viper.BindPFlag("org", rootCmd.Flags().Lookup("org")))
-	cobra.CheckErr(viper.BindPFlag("timeout", rootCmd.Flags().Lookup("timeout")))
-	cobra.CheckErr(viper.BindPFlag("branch", rootCmd.Flags().Lookup("branch")))
-	cobra.CheckErr(viper.BindPFlag("version.change", rootCmd.Flags().Lookup("version.change")))
-	cobra.CheckErr(viper.BindPFlag("token", rootCmd.Flags().Lookup("token")))
-	cobra.CheckErr(viper.BindPFlag("host", rootCmd.Flags().Lookup("host")))
-}
-
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		config, err := os.UserConfigDir()
-		cobra.CheckErr(err)
-
-		// Search config in config directory with name "releaser" (without extension).
-		viper.AddConfigPath(config)
-		viper.SetConfigType("yaml")
-		viper.SetConfigName("releaser")
-	}
-
-	viper.AutomaticEnv() // read in environment variables that match
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err != nil {
-		// Only set the default config if the user is not providing a config via path
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok && cfgFile == "" {
-			config, err := os.UserConfigDir()
-			cobra.CheckErr(err)
-
-			defaultPath := filepath.Join(config, "releaser.yaml")
-
-			err = ioutil.WriteFile(defaultPath, exampleConfig, 0600)
-			cobra.CheckErr(err)
-
-			fmt.Printf("Wrote example config file to %s\n", defaultPath)
-			os.Exit(0)
-		} else {
-			cobra.CheckErr(err)
-		}
-	}
 }

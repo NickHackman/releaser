@@ -83,7 +83,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.config.Width, m.config.Height = msg.Width, msg.Height
+		m.config.SetSize(msg.Width, msg.Height)
 		m.progress.Width = msg.Width
 
 		_, h := lipgloss.Size(m.progress.View())
