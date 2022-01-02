@@ -22,22 +22,9 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"fmt"
-	"net/http"
-
-	"github.com/cli/browser"
-	oauth "github.com/cli/oauth/webapp"
+	"github.com/NickHackman/releaser/internal/github"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-)
-
-var (
-	githubClientID = "f1afcf6b3e2a5972dfcf"
-	// Safe to embed secret as it can be extracted from a released artifact.
-	//
-	// Following pattern from https://github.com/cli/cli/pull/492.
-	// nolint:gosec // safe to embed secret as it can be extracted from a released artifact.
-	githubClientSecret = "f79d57e38718ac9accd306432da4c623875d301a"
 )
 
 // loginCmd represents the login command
@@ -52,7 +39,7 @@ releaser login
 
 releaser login --auth.url git.enterprise.com`,
 	Run: func(cmd *cobra.Command, args []string) {
-		token, err := githubOauthFlow()
+		token, err := github.Auth()
 		cobra.CheckErr(err)
 
 		config := viper.GetViper()
@@ -60,45 +47,6 @@ releaser login --auth.url git.enterprise.com`,
 		err = config.WriteConfig()
 		cobra.CheckErr(err)
 	},
-}
-
-func githubOauthFlow() (string, error) {
-	flow, err := oauth.InitFlow()
-	if err != nil {
-		return "", fmt.Errorf("failed to initialize Oauth flow: %v", err)
-	}
-
-	params := oauth.BrowserParams{
-		ClientID:    githubClientID,
-		RedirectURI: "http://127.0.0.1/callback",
-		Scopes:      []string{"repo", "read:org"},
-		AllowSignup: true,
-	}
-
-	url := viper.GetString("auth.url")
-	authURL := fmt.Sprintf("%s/login/oauth/authorize", url)
-	browserURL, err := flow.BrowserURL(authURL, params)
-	if err != nil {
-		return "", fmt.Errorf("failed to set browser URL: %v", err)
-	}
-
-	go func() {
-		_ = flow.StartServer(nil)
-	}()
-
-	if err = browser.OpenURL(browserURL); err != nil {
-		return "", fmt.Errorf("failed to open browser: %v", err)
-	}
-
-	accessTokenURL := fmt.Sprintf("%s/login/oauth/access_token", url)
-
-	httpClient := http.DefaultClient
-	accessToken, err := flow.AccessToken(httpClient, accessTokenURL, githubClientSecret)
-	if err != nil {
-		return "", fmt.Errorf("failed to get GitHub Oauth token: %v", err)
-	}
-
-	return accessToken.Token, nil
 }
 
 func init() {
