@@ -22,13 +22,19 @@ THE SOFTWARE.
 package cmd
 
 import (
+	_ "embed"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 
 	"github.com/spf13/viper"
 )
+
+//go:embed releaser.example.yml
+var exampleConfig []byte
 
 var cfgFile string
 
@@ -94,9 +100,20 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err != nil {
-		fmt.Println(err)
-		fmt.Printf("An example configuration file can be found at https://github.com/NickHackman/releaser/blob/main/releaser.example.yml\n")
+		// Only set the default config if the user is not providing a config via path
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok && cfgFile == "" {
+			config, err := os.UserConfigDir()
+			cobra.CheckErr(err)
 
-		os.Exit(1)
+			defaultPath := filepath.Join(config, "releaser.yaml")
+
+			err = ioutil.WriteFile(defaultPath, exampleConfig, 0600)
+			cobra.CheckErr(err)
+
+			fmt.Printf("Wrote example config file to %s\n", defaultPath)
+			os.Exit(0)
+		} else {
+			cobra.CheckErr(err)
+		}
 	}
 }

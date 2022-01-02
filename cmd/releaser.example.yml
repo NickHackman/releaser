@@ -1,0 +1,50 @@
+# GitHub API URL
+url: https://api.github.com/
+timeout: 1m0s
+# Defaults to the provided branch, or the default branch if not provided
+branch: main
+# Method to determine the new version.
+#
+# Methods:
+# major        Increment Major version 1.3.0 -> 2.0.0
+# minor        Increment Minor version 1.3.0 -> 1.4.0
+# patch        Increment Patch version 1.3.0 -> 1.3.1
+version:
+  change: minor
+# URL used for authorization
+auth:
+  url: https://github.com/
+# Template
+#
+# Top Level Variables:
+# {{ .RepositoryName }}                  hello-world
+# {{ .RepositoryOwner }}                 octocat
+# {{ .RepositoryURL }}                   https://github.com/octocat/hello-world
+# {{ .RepositoryDescription }}           Example description
+# {{ .RepositoryDefaultBranch }}         main
+# {{ .Commits }}                         List of commits
+#
+# Commit:
+# {{ .Sha }}                             Unique identifier for commit
+# {{ .URL }}                             URL to commit
+# {{ .Summary }}                         First line of the commit message
+# {{ .Message }}                         Full commit message (includes newlines)
+#
+# Author/Committer:
+# {{ .AuthorUsername }}                  octocat (GitHub Username)
+# {{ .AuthorName }}                      octocat (Commit Name)
+# {{ .AuthorEmail }}                     octocat@github.com
+# {{ .AuthorDate }}
+# {{ .AuthorURL }}                       https://github.com/octocat
+#
+# Templates also include Sprig functions: https://masterminds.github.io/sprig/strings.html
+#
+# Example:
+#
+# {{ range .Commits }}
+# {{ substr 0 8 .Sha }} committed by {{ .CommitterUsername }} and authored by {{ .AuthorUsername }} {{ .Summary }}
+# {{ end }}
+template: |
+  {{ range .Commits }}
+  {{ substr 0 8 .Sha }} {{ .Summary }}
+  {{ end }}
