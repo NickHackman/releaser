@@ -104,9 +104,9 @@ releaser --org example --version.change minor
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		token := viper.GetString("token")
-		url := viper.GetString("url")
+		host := viper.GetString("host")
 
-		gh, err := github.New().URL(url).Token(token).Build()
+		gh, err := github.New().Host(host).Token(token).Build()
 		if err != nil {
 			return err
 		}
@@ -138,7 +138,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $XDG_CONFIG_HOME/releaser.yaml)")
-	rootCmd.Flags().String("url", "https://api.github.com/", "GitHub API url")
+	rootCmd.Flags().String("host", "github.com", "Hostname of GitHub or GitHub Enterprise")
 	rootCmd.Flags().String("token", "", "GitHub Oauth Token")
 	rootCmd.Flags().StringP("org", "o", "", "GitHub organization to create releases")
 	rootCmd.Flags().String("template", "", "Go template that is the default message for all releases")
@@ -152,7 +152,7 @@ func init() {
 	cobra.CheckErr(viper.BindPFlag("branch", rootCmd.Flags().Lookup("branch")))
 	cobra.CheckErr(viper.BindPFlag("version.change", rootCmd.Flags().Lookup("version.change")))
 	cobra.CheckErr(viper.BindPFlag("token", rootCmd.Flags().Lookup("token")))
-	cobra.CheckErr(viper.BindPFlag("url", rootCmd.Flags().Lookup("url")))
+	cobra.CheckErr(viper.BindPFlag("host", rootCmd.Flags().Lookup("host")))
 }
 
 // initConfig reads in config file and ENV variables if set.

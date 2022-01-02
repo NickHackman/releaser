@@ -39,7 +39,8 @@ releaser login
 
 releaser login --auth.url git.enterprise.com`,
 	Run: func(cmd *cobra.Command, args []string) {
-		token, err := github.Auth()
+		host := viper.GetString("host")
+		token, err := github.Auth(host)
 		cobra.CheckErr(err)
 
 		config := viper.GetViper()

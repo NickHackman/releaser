@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 
 	"github.com/google/go-github/v41/github"
@@ -18,7 +19,14 @@ func New() *Builder {
 	return &Builder{}
 }
 
-func (ghb *Builder) URL(url string) *Builder {
+func (ghb *Builder) Host(host string) *Builder {
+	url := "https://api.github.com/"
+
+	// Handle GitHub Enterprise
+	if host != "github.com" {
+		url = fmt.Sprintf("https://%s/api/v3/", host)
+	}
+
 	ghb.url = url
 	return ghb
 }

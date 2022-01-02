@@ -6,7 +6,6 @@ import (
 
 	"github.com/cli/browser"
 	oauth "github.com/cli/oauth/webapp"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -18,7 +17,7 @@ const (
 	githubClientSecret = "f79d57e38718ac9accd306432da4c623875d301a"
 )
 
-func Auth() (string, error) {
+func Auth(host string) (string, error) {
 	flow, err := oauth.InitFlow()
 	if err != nil {
 		return "", fmt.Errorf("failed to initialize Oauth flow: %v", err)
@@ -31,8 +30,8 @@ func Auth() (string, error) {
 		AllowSignup: true,
 	}
 
-	url := viper.GetString("auth.url")
-	authURL := fmt.Sprintf("%s/login/oauth/authorize", url)
+	baseURL := fmt.Sprintf("https://%s", host)
+	authURL := fmt.Sprintf("%s/login/oauth/authorize", baseURL)
 	browserURL, err := flow.BrowserURL(authURL, params)
 	if err != nil {
 		return "", fmt.Errorf("failed to set browser URL: %v", err)
@@ -46,7 +45,7 @@ func Auth() (string, error) {
 		return "", fmt.Errorf("failed to open browser: %v", err)
 	}
 
-	accessTokenURL := fmt.Sprintf("%s/login/oauth/access_token", url)
+	accessTokenURL := fmt.Sprintf("%s/login/oauth/access_token", baseURL)
 
 	httpClient := http.DefaultClient
 	accessToken, err := flow.AccessToken(httpClient, accessTokenURL, githubClientSecret)
