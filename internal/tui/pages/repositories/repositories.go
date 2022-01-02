@@ -45,7 +45,7 @@ func New(gh *github.Client, config *config.Config) *Model {
 	list.SetShowHelp(false)
 	list.Styles.Title = listTitleStyle
 
-	helpKeys := func() []key.Binding {
+	list.AdditionalFullHelpKeys = func() []key.Binding {
 		return []key.Binding{
 			delegate.Keys.Selection,
 			keys.Open,
@@ -55,8 +55,12 @@ func New(gh *github.Client, config *config.Config) *Model {
 		}
 	}
 
-	list.AdditionalFullHelpKeys = helpKeys
-	list.AdditionalShortHelpKeys = helpKeys
+	list.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			delegate.Keys.Selection,
+			keys.Publish,
+		}
+	}
 
 	m := &Model{
 		list:     list,
