@@ -29,17 +29,15 @@ func (d Delegate) Render(w io.Writer, m list.Model, index int, listItem list.Ite
 		return
 	}
 
-	org := i.Org
-
 	var output strings.Builder
-	output.WriteString(titleStyle.Render(org.GetLogin()))
+	output.WriteString(titleStyle.Render(i.Login))
 
-	if description := org.GetDescription(); description != "" {
-		output.WriteString("\n" + descriptionStyle.Render(description))
+	if i.Description != "" {
+		output.WriteString("\n" + descriptionStyle.Render(i.Description))
 	}
 
-	if url := org.GetHTMLURL(); url != "" {
-		output.WriteString("\n" + urlStyle.Render(url))
+	if i.URL != "" {
+		output.WriteString("\n" + urlStyle.Render(i.URL))
 	}
 
 	render := unselectedStyle.Render

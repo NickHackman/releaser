@@ -74,7 +74,7 @@ func fetch(config *config.Config, gh *github.Client) <-chan *github.OrgResponse 
 }
 
 func (m Model) Init() tea.Cmd {
-	return awaitCmd(m.channel)
+	return loadOrganizationsCmd(m.channel)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -88,12 +88,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		_, h := lipgloss.Size(m.progress.View())
 		m.list.SetSize(msg.Width, msg.Height-h)
-	case organization.Item:
+	case loadedOrganizationCmd:
 		m.orgs++
 
 		index := len(m.list.Items()) - 1
 		percent := float64(m.orgs) / float64(msg.Total)
-		cmds = append(cmds, awaitCmd(m.channel), m.progress.SetPercent(percent), m.list.InsertItem(index, msg))
+		cmds = append(cmds, loadOrganizationsCmd(m.channel), m.progress.SetPercent(percent), m.list.InsertItem(index, msg.Item))
 	case progress.FrameMsg:
 		progressModel, cmd := m.progress.Update(msg)
 		m.progress = progressModel.(progress.Model)
@@ -114,7 +114,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			browser.Stdout = &output
 
 			var statusMsg string
-			if err := browser.OpenURL(organization.Org.GetHTMLURL()); err != nil {
+			if err := browser.OpenURL(organization.URL); err != nil {
 				statusMsg = "Error: " + err.Error()
 			} else {
 				statusMsg = output.String()
@@ -127,7 +127,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 
-			m.config.Org = organization.Org.GetLogin()
+			m.config.Org = organization.Login
 
 			repositories := repositories.New(m.gh, m.config)
 			return repositories, repositories.Init()
@@ -146,15 +146,4 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, m.list.View(), m.progress.View())
-}
-
-func awaitCmd(channel <-chan *github.OrgResponse) tea.Cmd {
-	return func() tea.Msg {
-		org, ok := <-channel
-		if !ok {
-			return nil
-		}
-
-		return organization.Item{OrgResponse: org}
-	}
 }

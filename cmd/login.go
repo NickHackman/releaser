@@ -69,10 +69,10 @@ releaser --host git.enterprise.com login`,
 		ctx, cancel := context.WithTimeout(context.Background(), c.Timeout)
 		defer cancel()
 
-		username, err := gh.Username(ctx)
+		user, err := gh.User(ctx)
 		cobra.CheckErr(err)
 
-		err = c.SaveHost(config.Auth{Username: username, Token: token})
+		err = c.SaveHost(config.Auth{Username: user.GetLogin(), Token: token})
 		cobra.CheckErr(err)
 	},
 }

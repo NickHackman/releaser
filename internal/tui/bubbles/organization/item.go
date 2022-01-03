@@ -1,13 +1,11 @@
 package organization
 
-import (
-	"github.com/NickHackman/releaser/internal/github"
-)
-
 type Item struct {
-	*github.OrgResponse
+	Login       string
+	Description string
+	URL         string
 }
 
 func (i Item) FilterValue() string {
-	return i.Org.GetLogin()
+	return i.Login
 }

@@ -229,7 +229,16 @@ func (m Model) View() string {
 
 func fetch(config *config.Config, gh *github.Client, org string) <-chan *github.ReleaseableRepoResponse {
 	ctx, cancel := context.WithTimeout(context.Background(), config.Timeout)
-	channel, callback := gh.ReleasableReposByOrg(ctx, org, config.Branch)
+
+	var channel <-chan *github.ReleaseableRepoResponse
+	var callback func() error
+
+	switch {
+	case config.Username == org:
+		channel, callback = gh.ReleaseableReposByUser(ctx, config.Username, config.Branch)
+	default:
+		channel, callback = gh.ReleasableReposByOrg(ctx, org, config.Branch)
+	}
 
 	go func() {
 		defer cancel()

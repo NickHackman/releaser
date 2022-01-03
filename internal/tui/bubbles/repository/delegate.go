@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/muesli/reflow/wordwrap"
+	"github.com/muesli/reflow/truncate"
 )
 
 type Delegate struct {
@@ -68,7 +68,7 @@ func (d Delegate) Render(w io.Writer, m list.Model, index int, listItem list.Ite
 	}
 
 	if description := item.Repo.GetDescription(); description != "" {
-		text := strings.Split(wordwrap.String(description, 75), "\n")[0]
+		text := truncate.StringWithTail(description, 70, "...")
 		output.WriteString("\n" + descriptionStyle.Render(text))
 	}
 

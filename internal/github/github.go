@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/google/go-github/v41/github"
 	"golang.org/x/sync/errgroup"
@@ -97,11 +98,21 @@ func (gh *Client) createRelease(ctx context.Context, owner, repo, version, body 
 func (gh *Client) tags(ctx context.Context, owner, repo string) ([]*github.RepositoryTag, error) {
 	next := 1
 
-	var tags []*github.RepositoryTag
+	tags := make([]*github.RepositoryTag, 0)
 	for {
 		options := &github.ListOptions{Page: next, PerPage: githubMaxPerPage}
 
 		responseTags, r, err := gh.client.Repositories.ListTags(ctx, owner, repo, options)
+		if r == nil || r.Response == nil {
+			break
+		}
+
+		if r.Rate.Remaining == 0 {
+			rateLimit := time.Until(r.Rate.Reset.Time)
+			time.Sleep(rateLimit)
+			continue
+		}
+
 		if err != nil {
 			return nil, err
 		}
@@ -130,8 +141,25 @@ func (gh *Client) mostRecentTagAndChanges(ctx context.Context, owner, repo strin
 		options := &github.CommitsListOptions{SHA: branch, ListOptions: github.ListOptions{PerPage: githubMaxPerPage, Page: next}}
 
 		commits, r, err := gh.client.Repositories.ListCommits(ctx, owner, repo, options)
+
+		if r == nil || r.Response == nil {
+			break
+		}
+
+		// Occurs when Branch is not found
 		if r.Response.StatusCode == http.StatusNotFound {
 			branch = ""
+			continue
+		}
+
+		// Occurs when GitHub repository is empty
+		if r.Response.StatusCode == http.StatusConflict {
+			break
+		}
+
+		if r.Rate.Remaining == 0 {
+			rateLimit := time.Until(r.Rate.Reset.Time)
+			time.Sleep(rateLimit)
 			continue
 		}
 
@@ -141,6 +169,10 @@ func (gh *Client) mostRecentTagAndChanges(ctx context.Context, owner, repo strin
 
 		if err := github.CheckResponse(r.Response); err != nil {
 			return "", nil, nil, err
+		}
+
+		if commits == nil {
+			break
 		}
 
 		for _, commit := range commits {
@@ -171,6 +203,17 @@ func (gh *Client) branches(ctx context.Context, owner, repo string) ([]*github.B
 	for {
 		options := &github.BranchListOptions{ListOptions: github.ListOptions{PerPage: githubMaxPerPage, Page: next}}
 		branchesList, r, err := gh.client.Repositories.ListBranches(ctx, owner, repo, options)
+
+		if r == nil || r.Response == nil {
+			break
+		}
+
+		if r.Rate.Remaining == 0 {
+			rateLimit := time.Until(r.Rate.Reset.Time)
+			time.Sleep(rateLimit)
+			continue
+		}
+
 		if err != nil {
 			return nil, err
 		}
@@ -246,6 +289,67 @@ func (gh *Client) ReleaseableRepo(ctx context.Context, org string, repo *github.
 	}, nil
 }
 
+func (gh *Client) ReleaseableReposByUser(ctx context.Context, user, branch string) (<-chan *ReleaseableRepoResponse, func() error) {
+	c := make(chan *ReleaseableRepoResponse)
+	next := 1
+	var total int32
+
+	errGrp, ctx := errgroup.WithContext(ctx)
+
+	return c, func() error {
+		defer close(c)
+
+		for {
+			options := &github.RepositoryListOptions{Affiliation: "owner", Sort: "updated", ListOptions: github.ListOptions{PerPage: githubMaxPerPage, Page: next}}
+			possibleRepos, r, err := gh.client.Repositories.List(ctx, "", options)
+			if err != nil {
+				return err
+			}
+
+			if err := github.CheckResponse(r.Response); err != nil {
+				return err
+			}
+
+			if len(possibleRepos) == 0 {
+				continue
+			}
+
+			atomic.AddInt32(&total, int32(len(possibleRepos)))
+
+			for _, repo := range possibleRepos {
+				repo := repo
+
+				errGrp.Go(func() error {
+					releaseableRepo, err := gh.ReleaseableRepo(ctx, user, repo, branch)
+					if err != nil {
+						return err
+					}
+
+					if releaseableRepo == nil {
+						atomic.AddInt32(&total, -1)
+						return nil
+					}
+
+					releaseableRepo.Total = total
+					c <- releaseableRepo
+					return nil
+				})
+			}
+
+			next = r.NextPage
+			if next == 0 {
+				break
+			}
+		}
+
+		if err := errGrp.Wait(); err != nil {
+			return err
+		}
+
+		return nil
+	}
+}
+
 // ReleaseableReposByOrg async retrival of GitHub repositories for an organization. Returns a channel to listen to for ReleasableRepos
 // and the function to run as a goroutine to acquire them.
 //
@@ -264,6 +368,16 @@ func (gh *Client) ReleasableReposByOrg(ctx context.Context, org, branch string) 
 			options := &github.RepositoryListByOrgOptions{Sort: "updated", ListOptions: github.ListOptions{PerPage: githubMaxPerPage, Page: next}}
 
 			possibleRepos, r, err := gh.client.Repositories.ListByOrg(ctx, org, options)
+			if r == nil || r.Response == nil {
+				break
+			}
+
+			if r.Rate.Remaining == 0 {
+				rateLimit := time.Until(r.Rate.Reset.Time)
+				time.Sleep(rateLimit)
+				continue
+			}
+
 			if err != nil {
 				return err
 			}
@@ -315,8 +429,14 @@ func (gh *Client) ReleasableReposByOrg(ctx context.Context, org, branch string) 
 type OrgResponse struct {
 	// Total determines when all user Organizations are finished being loaded.
 	Total int
-	// Org GitHub organization.
-	Org *github.Organization
+	// Org GitHub organization or the current user.
+	Org *Organization
+}
+
+type Organization struct {
+	Login       string
+	Description string
+	URL         string
 }
 
 // Orgs async retrival of GitHub organizations. Returns a channel to listen to for OrgsResponse
@@ -330,10 +450,31 @@ func (gh *Client) Orgs(ctx context.Context) (<-chan *OrgResponse, func() error) 
 	return c, func() error {
 		defer close(c)
 
+		errGrp.Go(func() error {
+			user, err := gh.User(ctx)
+			if err != nil {
+				return err
+			}
+
+			c <- &OrgResponse{Total: 1, Org: &Organization{Login: user.GetLogin(), Description: user.GetBio(), URL: user.GetHTMLURL()}}
+			return nil
+		})
+
 		for {
 			options := &github.ListOptions{Page: next, PerPage: githubMaxPerPage}
 
 			orgs, r, err := gh.client.Organizations.List(ctx, "", options)
+
+			if r == nil || r.Response == nil {
+				break
+			}
+
+			if r.Rate.Remaining == 0 {
+				rateLimit := time.Until(r.Rate.Reset.Time)
+				time.Sleep(rateLimit)
+				continue
+			}
+
 			if err != nil {
 				return fmt.Errorf("failed to get organizations for authenticated user: %v", err)
 			}
@@ -355,7 +496,12 @@ func (gh *Client) Orgs(ctx context.Context) (<-chan *OrgResponse, func() error) 
 						return fmt.Errorf("failed to get additional information for organization %s: %v", org.GetLogin(), err)
 					}
 
-					c <- &OrgResponse{Total: len(orgs), Org: orgInfo}
+					// len(orgs) + 1 to account for the authenticated user
+					c <- &OrgResponse{Total: len(orgs) + 1, Org: &Organization{
+						Login:       orgInfo.GetLogin(),
+						Description: orgInfo.GetDescription(),
+						URL:         orgInfo.GetHTMLURL(),
+					}}
 
 					return nil
 				})
@@ -375,16 +521,27 @@ func (gh *Client) Orgs(ctx context.Context) (<-chan *OrgResponse, func() error) 
 	}
 }
 
-// Username get the username for the currently authenticated user.
-func (gh *Client) Username(ctx context.Context) (string, error) {
+// User get the current authenticated user.
+func (gh *Client) User(ctx context.Context) (*github.User, error) {
 	user, r, err := gh.client.Users.Get(ctx, "")
+	if r == nil || r.Response == nil {
+		return nil, err
+	}
+
+	if r.Rate.Remaining == 0 {
+		rateLimit := time.Until(r.Rate.Reset.Time)
+		time.Sleep(rateLimit)
+
+		return gh.User(ctx)
+	}
+
 	if err != nil {
-		return "", fmt.Errorf("failed to get authenticated user: %v", err)
+		return nil, fmt.Errorf("failed to get authenticated user: %v", err)
 	}
 
 	if err := github.CheckResponse(r.Response); err != nil {
-		return "", fmt.Errorf("failed to get authenticated user: %v", err)
+		return nil, fmt.Errorf("failed to get authenticated user: %v", err)
 	}
 
-	return user.GetLogin(), nil
+	return user, nil
 }
