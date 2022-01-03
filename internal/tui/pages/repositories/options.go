@@ -10,6 +10,7 @@ type keyMap struct {
 	Open          key.Binding
 	RefreshConfig key.Binding
 	More          key.Binding
+	ToggleAll     key.Binding
 	Quit          key.Binding
 }
 
@@ -18,6 +19,10 @@ func newKeyMap() *keyMap {
 		Publish: key.NewBinding(
 			key.WithKeys("enter"),
 			key.WithHelp("enter", "create release(s)"),
+		),
+		ToggleAll: key.NewBinding(
+			key.WithKeys("a"),
+			key.WithHelp("a", "toggle all repositories"),
 		),
 		Open: key.NewBinding(
 			key.WithKeys("o"),

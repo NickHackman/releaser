@@ -52,6 +52,7 @@ func New(gh *github.Client, config *config.Config) *Model {
 			keys.Publish,
 			keys.RefreshConfig,
 			keys.RefreshRepos,
+			keys.ToggleAll,
 		}
 	}
 
@@ -174,6 +175,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.channel = fetch(m.config, m.gh, m.config.Org)
 			m.preview.SetLoading()
 			cmds = append(cmds, m.progress.SetPercent(0), m.list.SetItems([]list.Item{}), m.Init())
+		case key.Matches(msg, m.keys.ToggleAll):
+			var newItems []list.Item
+			for _, item := range m.list.Items() {
+				current, ok := item.(repository.Item)
+				if !ok {
+					continue
+				}
+
+				newItems = append(newItems, current.Select())
+			}
+
+			cmds = append(cmds, m.list.SetItems(newItems))
 		}
 	}
 
