@@ -1,8 +1,24 @@
 # GitHub or GitHub Enterprise hostname
 host: github.com
+
+# How long to wait for GitHub prior to terminating execution
 timeout: 1m0s
+
 # Defaults to the provided branch, or the default branch if not provided
 branch: main
+
+# Organization to create releases for it will bypass UI page to pick an organization
+# Commented by default
+#
+# org: Example
+
+# Repositories to release, by providing this flag/config it will bypass the UI completely and create releases
+# Commented by default
+#
+# repositories:
+# - Example1
+# - Example2
+
 # Method to determine the new version.
 #
 # Methods:
@@ -11,6 +27,7 @@ branch: main
 # patch        Increment Patch version 1.3.0 -> 1.3.1
 version:
   change: minor
+
 # Template
 #
 # Top Level Variables:
