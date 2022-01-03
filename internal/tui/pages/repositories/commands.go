@@ -70,7 +70,7 @@ func loadRepositoriesCmd(channel <-chan *github.ReleaseableRepoResponse, config 
 
 		return repository.Item{
 			ReleaseableRepoResponse: r,
-			Preview:                 previewContent(r, config.Template),
+			Preview:                 PreviewContent(r, config.Template),
 			Branch:                  r.Branch,
 			Version:                 version.New(r.LatestTag.GetName(), config.VersionChange),
 		}
@@ -96,7 +96,7 @@ type commitTemplate struct {
 	CommitterURL      string
 }
 
-func previewContent(r *github.ReleaseableRepoResponse, templatedString string) string {
+func PreviewContent(r *github.ReleaseableRepoResponse, templatedString string) string {
 	var templateCommits []*commitTemplate
 
 	for _, c := range r.Commits {

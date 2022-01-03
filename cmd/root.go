@@ -136,4 +136,5 @@ func init() {
 	rootCmd.Flags().DurationP("timeout", "t", time.Minute, "Timeout duration to wait for GitHub to respond before exiting")
 	rootCmd.Flags().StringP("branch", "b", "", "Branch to create releases on (defaults to Repository's default branch)")
 	rootCmd.Flags().String("version.change", "", "Method to determine the new version based off the previous (major, minor, patch)")
+	rootCmd.Flags().StringSlice("repositories", make([]string, 0), "Repositories to release (if this flag is provided then noninteractive UI)")
 }

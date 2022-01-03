@@ -27,6 +27,7 @@ const (
 	VersionChangeFlag = "version.change"
 	TokenFlag         = "token"
 	HostFlag          = "host"
+	RepositoriesFlag  = "repositories"
 )
 
 // CreatedConfigErr error returned when InitViper fails due to the config not existing
@@ -47,6 +48,7 @@ var flags = []string{
 	VersionChangeFlag,
 	TokenFlag,
 	HostFlag,
+	RepositoriesFlag,
 }
 
 const (
@@ -80,6 +82,7 @@ type Config struct {
 	Branch        string
 	Token         string
 	Template      string
+	Repositories  []string
 	Timeout       time.Duration
 	VersionChange version.Change
 
@@ -226,6 +229,7 @@ func Load() (*Config, error) {
 		Org:           viper.GetString(OrgFlag),
 		Timeout:       viper.GetDuration(TimeoutFlag),
 		Template:      viper.GetString(TemplateFlag),
+		Repositories:  viper.GetStringSlice(RepositoriesFlag),
 		VersionChange: change,
 		AuthHosts:     authHosts,
 		Terminal:      &TerminalConfig{},
@@ -262,4 +266,14 @@ func (c *Config) SaveHost(auth Auth) error {
 	hostsPath := filepath.Join(dir, hostsFilename)
 
 	return ioutil.WriteFile(hostsPath, out, 0600)
+}
+
+func (c *Config) IsRepositoryToRelease(name string) bool {
+	for _, repo := range c.Repositories {
+		if repo == name {
+			return true
+		}
+	}
+
+	return false
 }
