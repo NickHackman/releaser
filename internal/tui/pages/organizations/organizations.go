@@ -1,7 +1,6 @@
 package organizations
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/NickHackman/releaser/internal/config"
@@ -14,7 +13,6 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/cli/browser"
 )
 
 const (
@@ -88,6 +86,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		_, h := lipgloss.Size(m.progress.View())
 		m.list.SetSize(msg.Width, msg.Height-h)
+	case errorCmd:
+		cmds = append(cmds, m.list.NewStatusMessage(msg.Error()))
 	case loadedOrganizationCmd:
 		m.orgs++
 
@@ -105,22 +105,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch {
 		case key.Matches(msg, m.keys.Open):
-			organization, ok := m.list.SelectedItem().(organization.Item)
-			if !ok {
-				break
-			}
-
-			var output bytes.Buffer
-			browser.Stdout = &output
-
-			var statusMsg string
-			if err := browser.OpenURL(organization.URL); err != nil {
-				statusMsg = "Error: " + err.Error()
-			} else {
-				statusMsg = output.String()
-			}
-
-			cmds = append(cmds, m.list.NewStatusMessage(statusMsg))
+			cmds = append(cmds, m.openURLCmd())
 		case key.Matches(msg, m.keys.Selection):
 			organization, ok := m.list.SelectedItem().(organization.Item)
 			if !ok {
