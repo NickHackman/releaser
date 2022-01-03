@@ -128,7 +128,7 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $XDG_CONFIG_HOME/releaser.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $XDG_CONFIG_HOME/releaser/config.yaml)")
 	rootCmd.PersistentFlags().String("host", "github.com", "Hostname of GitHub or GitHub Enterprise")
 	rootCmd.Flags().String("token", "", "GitHub Oauth Token")
 	rootCmd.Flags().StringP("org", "o", "", "GitHub organization to create releases")
