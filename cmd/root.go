@@ -88,11 +88,21 @@ Template Example:
 
 Examples:
 
+Log into github.com:
+
 releaser login
+
+Log into GitHub Enterprise:
 
 releaser login --auth.url git.enterprise.com
 
-releaser --org example --version.change minor
+Specify how to determine the version:
+
+releaser --version.change minor
+
+Bypass the UI entirely and create releases:
+
+releaser --org example --repositories example1,example2,example3
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := config.InitViper(cfgFile, cmd); err != nil {
