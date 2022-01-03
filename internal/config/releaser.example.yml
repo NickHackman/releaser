@@ -5,7 +5,9 @@ host: github.com
 timeout: 1m0s
 
 # Defaults to the provided branch, or the default branch if not provided
-branch: main
+# Commented by default to use the Repository's default branch
+#
+# branch: main
 
 # Organization to create releases for it will bypass UI page to pick an organization
 # Commented by default
