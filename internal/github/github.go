@@ -40,7 +40,7 @@ func (rrr *RepositoryReleaseResponse) IsError() bool {
 	return rrr.Error != nil
 }
 
-func (gh *Client) CreateReleases(ctx context.Context, owner string, releases []*RepositoryRelease) []*RepositoryReleaseResponse {
+func (gh *Client) CreateReleases(ctx context.Context, owner string, releases []*RepositoryRelease, createReleaseBranch bool) []*RepositoryReleaseResponse {
 	c := make(chan *RepositoryReleaseResponse, len(releases))
 
 	var wg sync.WaitGroup
@@ -52,7 +52,7 @@ func (gh *Client) CreateReleases(ctx context.Context, owner string, releases []*
 		go func() {
 			defer wg.Done()
 
-			r, err := gh.createRelease(ctx, owner, release.Name, release.Version, release.Body, release.TargetSHA)
+			r, err := gh.createRelease(ctx, owner, release, createReleaseBranch)
 			response := &RepositoryReleaseResponse{Owner: owner, Name: release.Name, Body: release.Body, Version: release.Version, Error: err}
 
 			if err == nil {
@@ -76,21 +76,36 @@ func (gh *Client) CreateReleases(ctx context.Context, owner string, releases []*
 	return releaseResponses
 }
 
-// createRelease Creates a GitHub release provided the owner/repo version and body where the name of the release and the tag will be version.
-func (gh *Client) createRelease(ctx context.Context, owner, repo, version, body, targetSHA string) (*github.RepositoryRelease, error) {
+// createRelease Creates a GitHub release provided the owner and other release information where the name of the release and the tag will be the version.
+func (gh *Client) createRelease(ctx context.Context, owner string, releaseInfo *RepositoryRelease, createReleaseBranch bool) (*github.RepositoryRelease, error) {
 	release := &github.RepositoryRelease{
-		TagName: github.String(version),
-		Body:    github.String(body),
-		Name:    github.String(version),
+		TagName:         github.String(releaseInfo.Version),
+		Body:            github.String(releaseInfo.Body),
+		Name:            github.String(releaseInfo.Version),
+		TargetCommitish: github.String(releaseInfo.TargetSHA),
 	}
 
-	releaseResponse, r, err := gh.client.Repositories.CreateRelease(ctx, owner, repo, release)
+	releaseResponse, r, err := gh.client.Repositories.CreateRelease(ctx, owner, releaseInfo.Name, release)
 	if err != nil {
 		return nil, err
 	}
 
 	if err := github.CheckResponse(r.Response); err != nil {
 		return nil, err
+	}
+
+	if createReleaseBranch {
+		releaseBranch := fmt.Sprintf("refs/heads/%s", releaseInfo.Version)
+
+		ref := &github.Reference{Ref: github.String(releaseBranch), Object: &github.GitObject{SHA: github.String(releaseInfo.TargetSHA)}}
+		_, r, err := gh.client.Git.CreateRef(ctx, owner, releaseInfo.Name, ref)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := github.CheckResponse(r.Response); err != nil {
+			return nil, err
+		}
 	}
 
 	return releaseResponse, nil

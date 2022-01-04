@@ -40,7 +40,7 @@ func (m *Model) publishCmd() tea.Cmd {
 			releases = append(releases, &github.RepositoryRelease{Name: i.Repo.GetName(), Version: i.Version, Body: i.Preview, TargetSHA: sha})
 		}
 
-		m.config.Terminal.Releases <- m.gh.CreateReleases(ctx, m.config.Org, releases)
+		m.config.Terminal.Releases <- m.gh.CreateReleases(ctx, m.config.Org, releases, m.config.CreateReleaseBranch)
 		return tea.Quit()
 	}
 }

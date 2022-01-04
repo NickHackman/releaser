@@ -21,6 +21,9 @@ timeout: 1m0s
 # - Example1
 # - Example2
 
+# Create a Branch pointing to the latest release for all releases
+create_release_branch: false
+
 # Method to determine the new version.
 #
 # Methods:

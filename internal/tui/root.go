@@ -79,18 +79,23 @@ func noninteractiveReleases(gh *github.Client, config *config.Config) error {
 		description := repositories.PreviewContent(repo, config.Template)
 
 		releases = append(releases, &github.RepositoryRelease{
-			Name:    name,
-			Version: newVersion,
-			Body:    description,
+			Name:      name,
+			Version:   newVersion,
+			Body:      description,
+			TargetSHA: repo.Commits[0].GetSHA(),
 		})
 	}
 
 	ctx, cancel = context.WithTimeout(context.Background(), config.Timeout)
 	defer cancel()
 
-	response := gh.CreateReleases(ctx, owner, releases)
+	response := gh.CreateReleases(ctx, owner, releases, config.CreateReleaseBranch)
 
-	printReleases(response)
+	if len(response) > 0 {
+		printReleases(response)
+	} else {
+		fmt.Println("No releases were created.")
+	}
 	return nil
 }
 

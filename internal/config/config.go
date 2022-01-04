@@ -20,14 +20,15 @@ import (
 var exampleConfig []byte
 
 const (
-	TemplateFlag      = "template"
-	OrgFlag           = "org"
-	TimeoutFlag       = "timeout"
-	BranchFlag        = "branch"
-	VersionChangeFlag = "version.change"
-	TokenFlag         = "token"
-	HostFlag          = "host"
-	RepositoriesFlag  = "repositories"
+	TemplateFlag            = "template"
+	OrgFlag                 = "org"
+	TimeoutFlag             = "timeout"
+	BranchFlag              = "branch"
+	VersionChangeFlag       = "version.change"
+	TokenFlag               = "token"
+	HostFlag                = "host"
+	RepositoriesFlag        = "repositories"
+	CreateReleaseBranchFlag = "create_release_branch"
 )
 
 // CreatedConfigErr error returned when InitViper fails due to the config not existing
@@ -49,6 +50,7 @@ var flags = []string{
 	TokenFlag,
 	HostFlag,
 	RepositoriesFlag,
+	CreateReleaseBranchFlag,
 }
 
 const (
@@ -76,15 +78,16 @@ type Auth struct {
 }
 
 type Config struct {
-	Username      string
-	Host          string
-	Org           string
-	Branch        string
-	Token         string
-	Template      string
-	Repositories  []string
-	Timeout       time.Duration
-	VersionChange version.Change
+	Username            string
+	Host                string
+	Org                 string
+	Branch              string
+	Token               string
+	Template            string
+	CreateReleaseBranch bool
+	Repositories        []string
+	Timeout             time.Duration
+	VersionChange       version.Change
 
 	AuthHosts AuthHosts
 	Terminal  *TerminalConfig
@@ -223,16 +226,17 @@ func Load() (*Config, error) {
 	}
 
 	return &Config{
-		Host:          viper.GetString(HostFlag),
-		Token:         viper.GetString(TokenFlag),
-		Branch:        viper.GetString(BranchFlag),
-		Org:           viper.GetString(OrgFlag),
-		Timeout:       viper.GetDuration(TimeoutFlag),
-		Template:      viper.GetString(TemplateFlag),
-		Repositories:  viper.GetStringSlice(RepositoriesFlag),
-		VersionChange: change,
-		AuthHosts:     authHosts,
-		Terminal:      &TerminalConfig{},
+		Host:                viper.GetString(HostFlag),
+		Token:               viper.GetString(TokenFlag),
+		Branch:              viper.GetString(BranchFlag),
+		Org:                 viper.GetString(OrgFlag),
+		Timeout:             viper.GetDuration(TimeoutFlag),
+		Template:            viper.GetString(TemplateFlag),
+		Repositories:        viper.GetStringSlice(RepositoriesFlag),
+		CreateReleaseBranch: viper.GetBool(CreateReleaseBranchFlag),
+		VersionChange:       change,
+		AuthHosts:           authHosts,
+		Terminal:            &TerminalConfig{},
 	}, nil
 }
 
