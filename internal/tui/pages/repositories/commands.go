@@ -39,7 +39,7 @@ func (m *Model) publishCmd() tea.Cmd {
 		}
 
 		m.config.Terminal.Releases <- m.gh.CreateReleases(ctx, m.config.Org, releases)
-		return tea.Quit
+		return tea.Quit()
 	}
 }
 
