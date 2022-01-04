@@ -21,9 +21,10 @@ type Client struct {
 }
 
 type RepositoryRelease struct {
-	Name    string
-	Version string
-	Body    string
+	Name      string
+	Version   string
+	Body      string
+	TargetSHA string
 }
 
 type RepositoryReleaseResponse struct {
@@ -51,7 +52,7 @@ func (gh *Client) CreateReleases(ctx context.Context, owner string, releases []*
 		go func() {
 			defer wg.Done()
 
-			r, err := gh.createRelease(ctx, owner, release.Name, release.Version, release.Body)
+			r, err := gh.createRelease(ctx, owner, release.Name, release.Version, release.Body, release.TargetSHA)
 			response := &RepositoryReleaseResponse{Owner: owner, Name: release.Name, Body: release.Body, Version: release.Version, Error: err}
 
 			if err == nil {
@@ -76,7 +77,7 @@ func (gh *Client) CreateReleases(ctx context.Context, owner string, releases []*
 }
 
 // createRelease Creates a GitHub release provided the owner/repo version and body where the name of the release and the tag will be version.
-func (gh *Client) createRelease(ctx context.Context, owner, repo, version, body string) (*github.RepositoryRelease, error) {
+func (gh *Client) createRelease(ctx context.Context, owner, repo, version, body, targetSHA string) (*github.RepositoryRelease, error) {
 	release := &github.RepositoryRelease{
 		TagName: github.String(version),
 		Body:    github.String(body),

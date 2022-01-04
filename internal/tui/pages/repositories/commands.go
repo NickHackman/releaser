@@ -35,7 +35,9 @@ func (m *Model) publishCmd() tea.Cmd {
 				continue
 			}
 
-			releases = append(releases, &github.RepositoryRelease{Name: i.Repo.GetName(), Version: i.Version, Body: i.Preview})
+			sha := i.Commits[0].GetSHA()
+
+			releases = append(releases, &github.RepositoryRelease{Name: i.Repo.GetName(), Version: i.Version, Body: i.Preview, TargetSHA: sha})
 		}
 
 		m.config.Terminal.Releases <- m.gh.CreateReleases(ctx, m.config.Org, releases)
