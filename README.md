@@ -12,6 +12,8 @@
 
 Create releases for a whole GitHub organization with ease!
 
+![releaser-showcase](https://user-images.githubusercontent.com/31719071/148008345-26fe7654-bee1-4255-8436-e5e26ecd7fdf.gif)
+
 ## Objective
 
 The purpose of this projects stems from working on Agile teams that have a quick release cycle (weekly, bi-weekly).
