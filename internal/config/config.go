@@ -37,7 +37,7 @@ type CreatedConfigErr struct {
 }
 
 func (cce CreatedConfigErr) Error() string {
-	return fmt.Sprintf("Wrote example config file to %s", cce.Path)
+	return fmt.Sprintf("wrote example config file to %s", cce.Path)
 }
 
 var flags = []string{
