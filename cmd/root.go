@@ -22,6 +22,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"os"
@@ -124,6 +125,17 @@ releaser --org example --repositories example1,example2,example3
 
 		gh, err := github.New().Host(config.Host).Token(config.Token).Build()
 		cobra.CheckErr(err)
+
+		// if token is provided fetch user's Username
+		if config.Username == "" {
+			ctx, cancel := context.WithTimeout(context.Background(), config.Timeout)
+			defer cancel()
+
+			user, err := gh.User(ctx)
+			cobra.CheckErr(err)
+
+			config.Username = user.GetLogin()
+		}
 
 		cobra.CheckErr(
 			tui.Execute(gh, config),
