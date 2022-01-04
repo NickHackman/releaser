@@ -1,4 +1,10 @@
-# releaser
+# Releaser
+
+<p>
+    <picture>
+        <img style="width: 450px" src="./assets/releaser.png" alt="Image of Releaser">
+    </picture>
+</p>
 
 [![build](https://github.com/NickHackman/releaser/actions/workflows/build.yml/badge.svg)](https://github.com/NickHackman/releaser/actions/workflows/build.yml)
 [![lint](https://github.com/NickHackman/releaser/actions/workflows/lint.yml/badge.svg)](https://github.com/NickHackman/releaser/actions/workflows/lint.yml)
@@ -6,14 +12,11 @@
 
 Create releases for a whole GitHub organization with ease!
 
-https://user-images.githubusercontent.com/31719071/147860818-cfd3ce0c-2f04-45e0-b693-ffc221e064fa.mp4
-
 ## Objective
 
-The purpose of this projects stems from working on Agile teams that ha
-
-ve a quick release cycle (weekly, bi-weekly). In my experience these teams usually have one team member that wastes
-a day or so each cycle determining which of their 30+ GitHub repositories need to be released and writing up and releasing them.
+The purpose of this projects stems from working on Agile teams that have a quick release cycle (weekly, bi-weekly).
+ In my experience these teams usually have one team member that wastes a day or so each cycle
+ determining which of their 30+ GitHub repositories need to be released and writing up and releasing them.
 
 Releaser automates the entire process!
 
@@ -44,20 +47,36 @@ go install github.com/NickHackman/releaser@latest
 
 4. Determines the version based off of the latest release (or defaults to `v0.1.0`)
 
-5. Allows individualized modifications of Release descriptions
+5. Create the Releases
 
-6. Create the Releases
-
-7. Prints out a Markdown list of the releases for posting in places like Slack for visibility :+1:
+6. Prints out a Markdown list of the releases for posting in places like Slack for visibility :+1:
 
 ## Configuration
 
 ```yaml
-# GitHub API URL
-url: https://api.github.com/
+# GitHub or GitHub Enterprise hostname
+host: github.com
+
+# How long to wait for GitHub prior to terminating execution
 timeout: 1m0s
+
 # Defaults to the provided branch, or the default branch if not provided
-branch: main
+# Commented by default to use the Repository's default branch
+#
+# branch: main
+
+# Organization to create releases for it will bypass UI page to pick an organization
+# Commented by default
+#
+# org: Example
+
+# Repositories to release, by providing this flag/config it will bypass the UI completely and create releases
+# Commented by default
+#
+# repositories:
+# - Example1
+# - Example2
+
 # Method to determine the new version.
 #
 # Methods:
@@ -66,9 +85,7 @@ branch: main
 # patch        Increment Patch version 1.3.0 -> 1.3.1
 version:
   change: minor
-# URL used for authorization
-auth:
-  url: https://github.com/
+
 # Template
 #
 # Top Level Variables:
