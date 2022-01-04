@@ -50,7 +50,7 @@ func New(gh *github.Client, config *config.Config) *Model {
 			delegate.Keys.Selection,
 			keys.Open,
 			keys.Publish,
-			keys.RefreshConfig,
+			keys.Refresh,
 			keys.RefreshRepos,
 			keys.ToggleAll,
 		}
@@ -59,6 +59,7 @@ func New(gh *github.Client, config *config.Config) *Model {
 	list.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
 			delegate.Keys.Selection,
+			keys.Refresh,
 			keys.Publish,
 		}
 	}
@@ -163,14 +164,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, m.openURLCmd())
 		case key.Matches(msg, m.keys.Publish):
 			cmds = append(cmds, m.publishCmd())
-		case key.Matches(msg, m.keys.RefreshConfig):
+		case key.Matches(msg, m.keys.Refresh):
 			if err := m.config.Refresh(); err != nil {
 				cmds = append(cmds, m.list.NewStatusMessage(err.Error()))
 			} else {
 				cmds = append(cmds, m.list.NewStatusMessage(refreshConfigMsg))
 			}
-			fallthrough // refresh all
-		case key.Matches(msg, m.keys.RefreshRepos):
+
 			m.repos = 0
 			m.channel = fetch(m.config, m.gh, m.config.Org)
 			m.preview.SetLoading()
