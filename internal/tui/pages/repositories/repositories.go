@@ -51,7 +51,6 @@ func New(gh *github.Client, config *config.Config) *Model {
 			keys.Open,
 			keys.Publish,
 			keys.Refresh,
-			keys.RefreshRepos,
 			keys.ToggleAll,
 		}
 	}
