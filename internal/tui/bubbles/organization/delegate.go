@@ -40,9 +40,9 @@ func (d Delegate) Render(w io.Writer, m list.Model, index int, listItem list.Ite
 		output.WriteString("\n" + urlStyle.Render(i.URL))
 	}
 
-	render := unselectedStyle.Render
+	render := unselectedStyle.MaxWidth(m.Width()).Render
 	if index == m.Index() {
-		render = selectedStyle.Render
+		render = selectedStyle.MaxWidth(m.Width()).Render
 	}
 
 	fmt.Fprint(w, render(output.String()))

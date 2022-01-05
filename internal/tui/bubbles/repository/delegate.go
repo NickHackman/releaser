@@ -13,6 +13,10 @@ import (
 	"github.com/muesli/reflow/truncate"
 )
 
+const (
+	repositoryListWidth = 70
+)
+
 type Delegate struct {
 	Keys   *keyMap
 	gh     *github.Client
@@ -68,7 +72,7 @@ func (d Delegate) Render(w io.Writer, m list.Model, index int, listItem list.Ite
 	}
 
 	if description := item.Repo.GetDescription(); description != "" {
-		text := truncate.StringWithTail(description, 70, "...")
+		text := truncate.StringWithTail(description, repositoryListWidth, "...")
 		output.WriteString("\n" + descriptionStyle.Render(text))
 	}
 
@@ -76,9 +80,9 @@ func (d Delegate) Render(w io.Writer, m list.Model, index int, listItem list.Ite
 		output.WriteString("\n" + urlStyle.Render(url))
 	}
 
-	render := unselectedStyle.Render
+	render := unselectedStyle.MaxWidth(repositoryListWidth).Render
 	if index == m.Index() {
-		render = selectedStyle.Render
+		render = selectedStyle.MaxWidth(repositoryListWidth).Render
 	}
 
 	fmt.Fprint(w, render(output.String()))
