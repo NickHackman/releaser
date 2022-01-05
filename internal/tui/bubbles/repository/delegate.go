@@ -77,7 +77,8 @@ func (d Delegate) Render(w io.Writer, m list.Model, index int, listItem list.Ite
 	}
 
 	if url := item.Repo.GetHTMLURL(); url != "" {
-		output.WriteString("\n" + urlStyle.Render(url))
+		text := truncate.StringWithTail(url, repositoryListWidth, "...")
+		output.WriteString("\n" + urlStyle.Render(text))
 	}
 
 	render := unselectedStyle.MaxWidth(repositoryListWidth).Render
