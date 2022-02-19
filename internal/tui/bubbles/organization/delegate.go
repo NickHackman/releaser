@@ -7,6 +7,11 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/muesli/reflow/truncate"
+)
+
+const (
+	terminalWidth = 70
 )
 
 type Delegate struct{}
@@ -33,11 +38,13 @@ func (d Delegate) Render(w io.Writer, m list.Model, index int, listItem list.Ite
 	output.WriteString(titleStyle.Render(i.Login))
 
 	if i.Description != "" {
-		output.WriteString("\n" + descriptionStyle.Render(i.Description))
+		desc := truncate.StringWithTail(i.Description, terminalWidth, "...")
+		output.WriteString("\n" + descriptionStyle.Render(desc))
 	}
 
 	if i.URL != "" {
-		output.WriteString("\n" + urlStyle.Render(i.URL))
+		url := truncate.StringWithTail(i.URL, terminalWidth, "...")
+		output.WriteString("\n" + urlStyle.Render(url))
 	}
 
 	render := unselectedStyle.MaxWidth(m.Width()).Render

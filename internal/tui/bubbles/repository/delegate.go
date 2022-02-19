@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	repositoryListWidth = 70
+	terminalWidth = 70
 )
 
 type Delegate struct {
@@ -72,18 +72,18 @@ func (d Delegate) Render(w io.Writer, m list.Model, index int, listItem list.Ite
 	}
 
 	if description := item.Repo.GetDescription(); description != "" {
-		text := truncate.StringWithTail(description, repositoryListWidth, "...")
+		text := truncate.StringWithTail(description, terminalWidth, "...")
 		output.WriteString("\n" + descriptionStyle.Render(text))
 	}
 
 	if url := item.Repo.GetHTMLURL(); url != "" {
-		text := truncate.StringWithTail(url, repositoryListWidth, "...")
+		text := truncate.StringWithTail(url, terminalWidth, "...")
 		output.WriteString("\n" + urlStyle.Render(text))
 	}
 
-	render := unselectedStyle.MaxWidth(repositoryListWidth).Render
+	render := unselectedStyle.MaxWidth(terminalWidth).Render
 	if index == m.Index() {
-		render = selectedStyle.MaxWidth(repositoryListWidth).Render
+		render = selectedStyle.MaxWidth(terminalWidth).Render
 	}
 
 	fmt.Fprint(w, render(output.String()))
